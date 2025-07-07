@@ -76,7 +76,6 @@ const TokenClaim = ({ name }: TokenProps) => {
   );
 };
 
-// Utility approve function
 type ApproveTokensProps = {
   tokenAContract: Address;
   tokenBContract: Address;
@@ -88,7 +87,6 @@ const useApproveTokens = (swapAddr: Address) => {
   const { writeContractAsync } = useWriteContract();
 
   return async ({ tokenAContract, tokenBContract, amountA, amountB }: ApproveTokensProps) => {
-    // Approve Token A
     await writeContractAsync({
       address: tokenAContract,
       abi: [
@@ -106,7 +104,6 @@ const useApproveTokens = (swapAddr: Address) => {
       args: [swapAddr, parseUnits(amountA, 18)],
     });
 
-    // Approve Token B
     await writeContractAsync({
       address: tokenBContract,
       abi: [
@@ -146,7 +143,7 @@ const SwapGetPrice = () => {
       : {
           contractName,
           functionName: "getPrice",
-          args: [undefined, undefined], // o [] si es opcional
+          args: [undefined, undefined],
         },
   );
 
@@ -184,7 +181,7 @@ const SwapGetLiquidity = () => {
   const [tokenA, setA] = useState("");
   const [tokenB, setB] = useState("");
   const shouldRead = Boolean(tokenA && tokenB);
-  const { data, isError, error } = useScaffoldReadContract(
+  const { data, isError } = useScaffoldReadContract(
     shouldRead
       ? {
           contractName,
@@ -194,10 +191,9 @@ const SwapGetLiquidity = () => {
       : {
           contractName,
           functionName: "totalLiquidity",
-          args: [undefined, undefined], // o [] si es opcional
+          args: [undefined, undefined],
         },
   );
-
 
   let body = null;
   if (isError) {
@@ -365,21 +361,17 @@ const SwapRemoveLiquidity = () => {
 const SwapGetOut = () => {
   const [inp, setInp] = useState({ amountIn: "", reserveIn: "", reserveOut: "" });
   const shouldRead = Boolean(inp.amountIn && inp.reserveIn && inp.reserveOut);
-  const { data, isError, error } = useScaffoldReadContract(
+  const { data } = useScaffoldReadContract(
     shouldRead
       ? {
           contractName,
           functionName: "getAmountOut",
-          args: [
-            parseUnits(inp.amountIn, 18),
-            parseUnits(inp.reserveIn, 18),
-            parseUnits(inp.reserveOut, 18),
-          ],
+          args: [parseUnits(inp.amountIn, 18), parseUnits(inp.reserveIn, 18), parseUnits(inp.reserveOut, 18)],
         }
       : {
           contractName,
           functionName: "getAmountOut",
-          args: [undefined, undefined, undefined], // o [] si tu contrato lo tolera
+          args: [undefined, undefined, undefined],
         },
   );
 
