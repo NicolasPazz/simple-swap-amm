@@ -1,8 +1,9 @@
+
 # 💱 SimpleSwap DEX
 
 ## 📜 Overview
 
-**SimpleSwap** is a minimalist DEX implemented in Solidity that enables:
+**SimpleSwap** is a DEX implemented in Solidity that enables:
 
 - ✅ Adding liquidity between two ERC20 tokens  
 - 🔁 Swapping tokens with exact input amounts  
@@ -13,6 +14,13 @@ All interactions are protected with input validation and `deadline` constraints 
 
 ---
 
+## 🌐 Frontend on Vercel (Next.js + Scaffold-ETH)
+
+The web application is deployed on Vercel and interacts with the contracts on Sepolia.
+>🔗 Live Demo: https://simple-swap-amm-nextjs.vercel.app/
+
+---
+
 ## 🛠️ Smart Contracts
 
 ### Core Contracts
@@ -20,6 +28,12 @@ All interactions are protected with input validation and `deadline` constraints 
 - 🔁 `SimpleSwap`: Manages liquidity pools and token swaps  
 - 💧 ERC20 Tokens: Dynamically generated via `TokenFactory`  
 - 🧱 LP Tokens: The `SimpleSwap` contract also acts as a liquidity token (inherits from `ERC20`)  
+
+### Deployed Addresses (Sepolia)
+
+- `BOOKE (Bokita Coin)`: [`0x3b6BEcE5Ec2Ac59c073B085D32D0962E2911bae8`](https://sepolia.etherscan.io/address/0x3b6BEcE5Ec2Ac59c073B085D32D0962E2911bae8)
+- `MIAMI (General Coin)`: [`0xf622c8a6634BC87C9cE4eC40C4Cf6Fccf257c9A1`](https://sepolia.etherscan.io/address/0xf622c8a6634BC87C9cE4eC40C4Cf6Fccf257c9A1)
+- `SimpleSwap`: [`0xb4E6d982Bb76c02a510B2144e810470bd08616Bb`](https://sepolia.etherscan.io/address/0xb4E6d982Bb76c02a510B2144e810470bd08616Bb)
 
 ### Key Features
 
@@ -70,11 +84,11 @@ cd packages/hardhat
 yarn deploy
 ```
 
----
+To verify individually:
 
-## 🌐 Frontend on Vercel (Next.js + Scaffold-ETH)
-
-The web application is deployed on Vercel and interacts with the contracts on Sepolia.
+```bash
+yarn hardhat verify --network sepolia 0xb4E6d982Bb76c02a510B2144e810470bd08616Bb 0x3b6BEcE5Ec2Ac59c073B085D32D0962E2911bae8 0xf622c8a6634BC87C9cE4eC40C4Cf6Fccf257c9A1
+```
 
 ---
 
