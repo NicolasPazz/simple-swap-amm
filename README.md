@@ -2,46 +2,79 @@
 
 ## 📜 Overview
 
-SimpleSwap allows:
+**SimpleSwap** is a minimalist DEX implemented in Solidity that enables:
 
-- ✅ Adding liquidity to a pair of ERC20 tokens
-- 🔁 Swapping exact input tokens for output tokens
-- 💧 Removing liquidity from a pool
-- 📊 Viewing current prices and swap estimates
+- ✅ Adding liquidity between two ERC20 tokens  
+- 🔁 Swapping tokens with exact input amounts  
+- 💧 Removing proportional liquidity  
+- 📊 Querying current prices and swap estimates  
 
-All interactions are protected with deadline and input validations to ensure secure and fair trading.
-
----
-
-## 🛠️ Smart Contract
-
-- 📂 Contract Name: `SimpleSwap`
-- 🔐 Inherits from: `ERC20` (used to issue LP tokens)
-- 🔗 Implements: `ISimpleSwap` interface
-
-### 🔧 Features
-
-- **Liquidity Management**
-  - `addLiquidity(...)`
-  - `removeLiquidity(...)`
-- **Token Swapping**
-  - `swapExactTokensForTokens(...)`
-- **Price Queries**
-  - `getPrice(...)`
-  - `getAmountOut(...)`
-- **Math Helpers**
-  - `min(uint a, uint b)`
-  - `sqrt(uint y)`
+All interactions are protected with input validation and `deadline` constraints to ensure safe and fair operations.
 
 ---
 
-## 🔗 Deployed Contracts on Sepolia
+## 🛠️ Smart Contracts
 
-| Name            | Symbol | Contract Address | Etherscan |
-|-----------------|--------|------------------|-----------|
-| Boquita Coin    | BOKE   | `0x543C4Fdb6dBB2BA4d9D9A48e3aAc84097512cACD` | [View](https://sepolia.etherscan.io/address/0x543C4Fdb6dBB2BA4d9D9A48e3aAc84097512cACD) |
-| General Coin    | MIAMI  | `0xC9CE6F4166E8a22bA1a17893F5F03b1B194a7e4c` | [View](https://sepolia.etherscan.io/address/0xC9CE6F4166E8a22bA1a17893F5F03b1B194a7e4c) |
-| SimpleSwap DEX  | LP     | `0xE283FAbD3c29731a5B79dd08156221229BEA0E66` | [View](https://sepolia.etherscan.io/address/0xE283FAbD3c29731a5B79dd08156221229BEA0E66) |
+### Core Contracts
+
+- 🔁 `SimpleSwap`: Manages liquidity pools and token swaps  
+- 💧 ERC20 Tokens: Dynamically generated via `TokenFactory`  
+- 🧱 LP Tokens: The `SimpleSwap` contract also acts as a liquidity token (inherits from `ERC20`)  
+
+### Key Features
+
+#### Liquidity
+
+- `addLiquidity(...)`  
+- `removeLiquidity(...)`  
+
+#### Swaps
+
+- `swapExactTokensForTokens(...)`  
+
+#### Queries
+
+- `getPrice(...)`  
+- `getAmountOut(...)`  
+
+#### Math Helpers
+
+- `min(uint a, uint b)`  
+- `sqrt(uint y)`  
+
+---
+
+## ✅ Tests and Coverage
+
+- The contract has **test coverage greater than 50%**  
+- Tests are written using **Hardhat + Chai**  
+- They run automatically upon deployment or critical code changes  
+
+To run tests and check coverage:
+
+```bash
+cd packages/hardhat
+yarn coverage
+```
+
+---
+
+## 🚀 Deployment and Verification
+
+Contracts are automatically deployed to the **Sepolia testnet** and verified on Etherscan (if a valid API key is provided).
+
+To deploy:
+
+```bash
+cd packages/hardhat
+yarn deploy
+```
+
+---
+
+## 🌐 Frontend on Vercel (Next.js + Scaffold-ETH)
+
+The web application is deployed on Vercel and interacts with the contracts on Sepolia.
 
 ---
 
@@ -49,41 +82,71 @@ All interactions are protected with deadline and input validations to ensure sec
 
 ### 1. Add Liquidity
 
-Users call `addLiquidity()` with two ERC20 tokens. The contract determines the optimal amounts based on existing reserves and mints LP tokens.
+The user calls `addLiquidity()` with the selected ERC20 tokens. The contract calculates the optimal ratio and mints LP tokens to the provider.
 
 ### 2. Swap Tokens
 
-Call `swapExactTokensForTokens()` to swap a specific input amount. The output is calculated via `getAmountOutInternal()` and transferred to the recipient.
+The user calls `swapExactTokensForTokens()` to exchange a fixed amount of one token for another, based on current reserves.
 
 ### 3. Remove Liquidity
 
-Users burn LP tokens via `removeLiquidity()` to retrieve their proportional share of both tokens.
+The user burns LP tokens via `removeLiquidity()` and receives a proportional share of both tokens.
 
 ---
 
-## 🧠 Security Checks
+## 🧠 Security
 
-- ✅ Deadline checks to prevent late transactions
-- ✅ Ratio enforcement to maintain pool balance
-- ✅ Reserve and amount validations
-- ✅ Explicit reverts for transfer failures
+- ✅ Deadline validations  
+- ✅ Reserve and amount checks  
+- ✅ Explicit reverts for failed transfers  
 
 ---
 
-## 📂 Interface: ISimpleSwap
+## 📂 Interface: `ISimpleSwap`
 
-The contract complies with a custom interface that standardizes all the swap and liquidity functions. This ensures compatibility with external dApps and verification tools.
+The `ISimpleSwap` interface standardizes all core functions, ensuring compatibility with external tools and explorer verification.
 
 ---
 
 ## 🧪 Example Usage
 
-1. **Add liquidity**:
 ```solidity
-simpleSwap.addLiquidity(tokenA, tokenB, 1000, 1000, 900, 900, msg.sender, block.timestamp + 120);
+// Add liquidity
+simpleSwap.addLiquidity(
+  tokenA,
+  tokenB,
+  1000,
+  1000,
+  900,
+  900,
+  msg.sender,
+  block.timestamp + 120
+);
+
+// Swap tokens
+simpleSwap.swapExactTokensForTokens(
+  1000,
+  900,
+  [tokenA, tokenB],
+  msg.sender,
+  block.timestamp + 120
+);
 ```
 
-2. **Swap tokens**:
-```solidity
-simpleSwap.swapExactTokensForTokens(1000, 900, [0x543C4Fdb6dBB2BA4d9D9A48e3aAc84097512cACD, 0xC9CE6F4166E8a22bA1a17893F5F03b1B194a7e4c], 0x183be2B201923C59802a28FF1c85f21Cebcff855, block.timestamp + 120);
+---
+
+## 🧱 Project Structure
+
 ```
+simple-swap/
+├── packages/
+│   ├── hardhat/         # Contracts and deployment scripts
+│   └── nextjs/          # Frontend using Next.js + Scaffold-ETH
+├── deployments/         # Contracts generated at deploy time (copied to frontend)
+```
+
+---
+
+## 🧾 License
+
+MIT © 2025
