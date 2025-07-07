@@ -1,6 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { Contract } from "ethers";
 
 /**
  * Deploys a contract named "YourContract" using the deployer account and
@@ -31,7 +30,6 @@ const deploySimpleSwap: DeployFunction = async function (hre: HardhatRuntimeEnvi
     // automatically mining the contract deployment transaction. There is no effect on live networks.
     autoMine: true,
   });
-
 };
 
 export default deploySimpleSwap;

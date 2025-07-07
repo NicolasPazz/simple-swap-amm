@@ -46,7 +46,7 @@ All interactions are protected with input validation and `deadline` constraints 
 
 ## ✅ Tests and Coverage
 
-- The contract has **test coverage greater than 50%**  
+- The contract has **test coverage greater than 60%**  
 - Tests are written using **Hardhat + Chai**  
 - They run automatically upon deployment or critical code changes  
 

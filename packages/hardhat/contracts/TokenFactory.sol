@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TokenFactory is ERC20 {
     /**
@@ -11,7 +11,7 @@ contract TokenFactory is ERC20 {
      * @param symbol Symbol of the new token to be created
      * @param amountToMint Initial amount of tokens to mint to the deployer's address
      */
-    constructor(string memory name, string memory symbol, uint amountToMint) ERC20(name,symbol) {
+    constructor(string memory name, string memory symbol, uint amountToMint) ERC20(name, symbol) {
         _mint(msg.sender, amountToMint * 10 ** decimals());
     }
 

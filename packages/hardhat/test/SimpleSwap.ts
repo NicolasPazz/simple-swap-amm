@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Contract, Signer } from "ethers";
+import { Signer } from "ethers";
 import { TokenFactory, SimpleSwap } from "../typechain-types";
 
 describe("SimpleSwap", function () {
@@ -27,11 +27,11 @@ describe("SimpleSwap", function () {
 
   describe("addLiquidity", () => {
     it("should add initial liquidity and mint LP tokens", async () => {
-    const block = await ethers.provider.getBlock("latest");
-    if (!block) {
-      throw new Error("No block data available");
-    }
-    const deadline = block.timestamp + 1000;
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) {
+        throw new Error("No block data available");
+      }
+      const deadline = block.timestamp + 1000;
 
       const tx = await swap.addLiquidity(
         tokenA.target,
@@ -62,21 +62,11 @@ describe("SimpleSwap", function () {
       }
 
       expect(event.args.liquidity).to.be.gt(0n);
-
     });
 
     it("should revert with expired deadline", async () => {
       await expect(
-        swap.addLiquidity(
-          tokenA.target,
-          tokenB.target,
-          1000,
-          1000,
-          0,
-          0,
-          await owner.getAddress(),
-          1,
-        ),
+        swap.addLiquidity(tokenA.target, tokenB.target, 1000, 1000, 0, 0, await owner.getAddress(), 1),
       ).to.be.revertedWith("SimpleSwap: EXPIRED");
     });
 
@@ -88,16 +78,7 @@ describe("SimpleSwap", function () {
       const deadline = block.timestamp + 1000;
 
       await expect(
-        swap.addLiquidity(
-          tokenA.target,
-          tokenA.target,
-          1000,
-          1000,
-          0,
-          0,
-          await owner.getAddress(),
-          deadline,
-        ),
+        swap.addLiquidity(tokenA.target, tokenA.target, 1000, 1000, 0, 0, await owner.getAddress(), deadline),
       ).to.be.revertedWith("SimpleSwap: IDENTICAL_ADDRESSES");
     });
 
@@ -171,7 +152,7 @@ describe("SimpleSwap", function () {
         throw new Error("No block data available");
       }
       const deadline = block.timestamp + 1000;
-      
+
       await swap.addLiquidity(
         tokenA.target,
         tokenB.target,
@@ -185,15 +166,7 @@ describe("SimpleSwap", function () {
 
       const lp = await swap.balanceOf(await owner.getAddress());
 
-      await swap.removeLiquidity(
-        tokenA.target,
-        tokenB.target,
-        lp,
-        0,
-        0,
-        await owner.getAddress(),
-        deadline,
-      );
+      await swap.removeLiquidity(tokenA.target, tokenB.target, lp, 0, 0, await owner.getAddress(), deadline);
     });
 
     it("should revert if user has no liquidity", async () => {
@@ -231,13 +204,15 @@ describe("SimpleSwap", function () {
       await tokenA.transfer(await user.getAddress(), ethers.parseEther("0.01"));
       await tokenA.connect(user).approve(swap.target, ethers.MaxUint256);
 
-      await swap.connect(user).swapExactTokensForTokens(
-        ethers.parseEther("0.01"),
-        0,
-        [tokenA.target, tokenB.target],
-        await user.getAddress(),
-        deadline,
-      );
+      await swap
+        .connect(user)
+        .swapExactTokensForTokens(
+          ethers.parseEther("0.01"),
+          0,
+          [tokenA.target, tokenB.target],
+          await user.getAddress(),
+          deadline,
+        );
     });
 
     it("should revert with invalid path", async () => {
@@ -290,7 +265,7 @@ describe("SimpleSwap", function () {
   describe("getAmountOut", () => {
     it("should calculate correct amountOut", async () => {
       const out = await swap.getAmountOut(1000, 1000, 2000);
-      expect(out).to.equal(ethers.toBigInt(Math.floor(1000 * 2000 / (1000 + 1000))));
+      expect(out).to.equal(ethers.toBigInt(Math.floor((1000 * 2000) / (1000 + 1000))));
     });
   });
 });

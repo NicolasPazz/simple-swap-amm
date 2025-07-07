@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ISimpleSwap} from "./interfaces/ISimpleSwap.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ISimpleSwap } from "./interfaces/ISimpleSwap.sol";
 
 /**
  * @title SimpleSwap
@@ -19,9 +19,23 @@ contract SimpleSwap is ERC20, ISimpleSwap {
     mapping(address => mapping(address => mapping(address => uint))) public userLiquidity;
 
     /// @notice Emitted when liquidity is added to the pool
-    event LiquidityAdded(address indexed provider, address indexed tokenA, address indexed tokenB, uint amountA, uint amountB, uint liquidity);
+    event LiquidityAdded(
+        address indexed provider,
+        address indexed tokenA,
+        address indexed tokenB,
+        uint amountA,
+        uint amountB,
+        uint liquidity
+    );
     /// @notice Emitted when liquidity is removed from the pool
-    event LiquidityRemoved(address indexed provider, address indexed tokenA, address indexed tokenB, uint amountA, uint amountB, uint liquidity);
+    event LiquidityRemoved(
+        address indexed provider,
+        address indexed tokenA,
+        address indexed tokenB,
+        uint amountA,
+        uint amountB,
+        uint liquidity
+    );
     /// @notice Emitted when a token swap is successfully executed
     event SwapExecuted(address indexed user, address tokenIn, address tokenOut, uint amountIn, uint amountOut);
 
@@ -81,7 +95,10 @@ contract SimpleSwap is ERC20, ISimpleSwap {
                 amountB = amountBOptimal;
             } else {
                 uint amountAOptimal = (amountBDesired * reserveA) / reserveB;
-                require(amountAOptimal <= amountADesired && amountAOptimal >= amountAMin, "SimpleSwap: INSUFFICIENT_A_OR_B");
+                require(
+                    amountAOptimal <= amountADesired && amountAOptimal >= amountAMin,
+                    "SimpleSwap: INSUFFICIENT_A_OR_B"
+                );
                 amountA = amountAOptimal;
                 amountB = amountBDesired;
             }
@@ -99,7 +116,10 @@ contract SimpleSwap is ERC20, ISimpleSwap {
         if (totalLiquidity[tokenA][tokenB] == 0) {
             liquidity = sqrt(amountA * amountB);
         } else {
-            liquidity = min((amountA * totalLiquidity[tokenA][tokenB]) / reserveA, (amountB * totalLiquidity[tokenA][tokenB]) / reserveB);
+            liquidity = min(
+                (amountA * totalLiquidity[tokenA][tokenB]) / reserveA,
+                (amountB * totalLiquidity[tokenA][tokenB]) / reserveB
+            );
         }
 
         require(liquidity > 0, "SimpleSwap: INSUFFICIENT_LIQUIDITY");
@@ -213,7 +233,7 @@ contract SimpleSwap is ERC20, ISimpleSwap {
      * @param tokenB Token B address
      * @return price Quoted price as tokenB/tokenA with 18 decimals
      */
-    function getPrice(address tokenA, address tokenB) external view returns (uint price){
+    function getPrice(address tokenA, address tokenB) external view returns (uint price) {
         uint reserveA = reservesA[tokenA][tokenB];
         uint reserveB = reservesB[tokenA][tokenB];
         require(reserveA > 0 && reserveB > 0, "SimpleSwap: NO_LIQUIDITY");
@@ -238,18 +258,21 @@ contract SimpleSwap is ERC20, ISimpleSwap {
      * @param reserveOut Reserve of token being output
      * @return amountOut Result of swap without fee
      */
-    function getAmountOutInternal(uint amountIn, uint reserveIn, uint reserveOut) internal pure returns (uint amountOut) {
+    function getAmountOutInternal(
+        uint amountIn,
+        uint reserveIn,
+        uint reserveOut
+    ) internal pure returns (uint amountOut) {
         require(amountIn > 0, "SimpleSwap: INSUFFICIENT_INPUT_AMOUNT");
         require(reserveIn > 0 && reserveOut > 0, "SimpleSwap: INSUFFICIENT_LIQUIDITY");
         amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
     }
 
-
     /// @dev Helper: returns the smaller of two uints
     function min(uint a, uint b) private pure returns (uint) {
         return a < b ? a : b;
     }
-    
+
     /// @dev Helper: integer square root (for initial LP minting)
     function sqrt(uint y) private pure returns (uint z) {
         if (y > 3) {
