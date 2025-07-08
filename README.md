@@ -60,25 +60,12 @@ The web application is deployed on Vercel and interacts with the contracts on Se
 
 ## ✅ Tests and Coverage
 
-The smart contracts reach **100% coverage** across statements, branches, functions, and lines. Running `npx hardhat coverage` from `packages/hardhat` prints a summary like:
-
-```
-File              | % Stmts | % Branch | % Funcs | % Lines |
-------------------|--------|---------|--------|--------|
-SimpleSwap.sol    | 100    | 100     | 100    | 100    |
-```
+The smart contracts reach **~65% coverage** across statements, branches, functions, and lines.
 Tests use **Hardhat** and **Chai**. Run them with:
 
 ```bash
 cd packages/hardhat
 npx hardhat coverage
-```
-
-To start the frontend locally:
-
-```bash
-cd packages/nextjs
-yarn dev
 ```
 
 ---
@@ -93,14 +80,6 @@ To deploy:
 cd packages/hardhat
 yarn deploy
 ```
-
-To verify individually:
-
-```bash
-yarn hardhat verify --network sepolia 0xb4E6d982Bb76c02a510B2144e810470bd08616Bb 0x3b6BEcE5Ec2Ac59c073B085D32D0962E2911bae8 0xf622c8a6634BC87C9cE4eC40C4Cf6Fccf257c9A1
-```
-
----
 
 ## 📈 How It Works
 
@@ -174,7 +153,3 @@ simple-swap/
 ## 🧾 License
 
 MIT © 2025
-
----
-
-Made by [Nicolas Paz](https://github.com/NicolasPazz)

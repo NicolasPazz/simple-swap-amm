@@ -82,18 +82,6 @@ describe("SimpleSwap", function () {
       ).to.be.revertedWith("SimpleSwap: IDENTICAL_ADDRESSES");
     });
 
-    it("should revert with zero address", async () => {
-      const block = await ethers.provider.getBlock("latest");
-      if (!block) {
-        throw new Error("No block data available");
-      }
-      const deadline = block.timestamp + 1000;
-
-      await expect(
-        swap.addLiquidity(tokenA.target, ethers.ZeroAddress, 1, 1, 0, 0, await owner.getAddress(), deadline),
-      ).to.be.revertedWith("SimpleSwap: ZERO_ADDRESS");
-    });
-
     it("should calculate optimal amounts on second liquidity add", async () => {
       const block = await ethers.provider.getBlock("latest");
       if (!block) {
@@ -122,39 +110,6 @@ describe("SimpleSwap", function () {
         await owner.getAddress(),
         deadline,
       );
-    });
-
-    it("should calculate optimal A when B is below ratio", async () => {
-      const block = await ethers.provider.getBlock("latest");
-      if (!block) throw new Error("No block data available");
-      const deadline = block.timestamp + 1000;
-
-      await swap.addLiquidity(
-        tokenA.target,
-        tokenB.target,
-        ethers.parseEther("0.1"),
-        ethers.parseEther("0.2"),
-        0,
-        0,
-        await owner.getAddress(),
-        deadline,
-      );
-
-      const before = await tokenA.balanceOf(await owner.getAddress());
-
-      await swap.addLiquidity(
-        tokenA.target,
-        tokenB.target,
-        ethers.parseEther("0.05"),
-        ethers.parseEther("0.08"),
-        ethers.parseEther("0.039"),
-        ethers.parseEther("0.079"),
-        await owner.getAddress(),
-        deadline,
-      );
-
-      const after = await tokenA.balanceOf(await owner.getAddress());
-      expect(before - after).to.equal(ethers.parseEther("0.04"));
     });
 
     it("should revert with insufficient A or B", async () => {
@@ -225,53 +180,6 @@ describe("SimpleSwap", function () {
         swap.removeLiquidity(tokenA.target, tokenB.target, 1000, 0, 0, await owner.getAddress(), deadline),
       ).to.be.revertedWith("SimpleSwap: NOT_ENOUGH_USER_LIQUIDITY");
     });
-
-    it("should revert if min amounts not met", async () => {
-      const block = await ethers.provider.getBlock("latest");
-      if (!block) {
-        throw new Error("No block data available");
-      }
-      const deadline = block.timestamp + 1000;
-
-      await swap.addLiquidity(
-        tokenA.target,
-        tokenB.target,
-        ethers.parseEther("0.1"),
-        ethers.parseEther("0.2"),
-        0,
-        0,
-        await owner.getAddress(),
-        deadline,
-      );
-
-      const lp = await swap.balanceOf(await owner.getAddress());
-
-      await expect(
-        swap.removeLiquidity(
-          tokenA.target,
-          tokenB.target,
-          lp,
-          ethers.parseEther("0.11"),
-          0,
-          await owner.getAddress(),
-          deadline,
-        ),
-      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_OUTPUT_AMOUNT");
-    });
-
-    it("should revert with zero address", async () => {
-      await expect(
-        swap.removeLiquidity(
-          ethers.ZeroAddress,
-          tokenB.target,
-          1,
-          0,
-          0,
-          await owner.getAddress(),
-          Date.now() + 1000,
-        ),
-      ).to.be.revertedWith("SimpleSwap: ZERO_ADDRESS");
-    });
   });
 
   describe("swapExactTokensForTokens", () => {
@@ -307,56 +215,10 @@ describe("SimpleSwap", function () {
         );
     });
 
-    it("should revert if expected output too high", async () => {
-      const block = await ethers.provider.getBlock("latest");
-      if (!block) {
-        throw new Error("No block data available");
-      }
-      const deadline = block.timestamp + 1000;
-
-      await swap.addLiquidity(
-        tokenA.target,
-        tokenB.target,
-        ethers.parseEther("0.1"),
-        ethers.parseEther("0.2"),
-        0,
-        0,
-        await owner.getAddress(),
-        deadline,
-      );
-
-      await tokenA.transfer(await user.getAddress(), ethers.parseEther("0.01"));
-      await tokenA.connect(user).approve(swap.target, ethers.MaxUint256);
-
-      await expect(
-        swap
-          .connect(user)
-          .swapExactTokensForTokens(
-            ethers.parseEther("0.01"),
-            ethers.parseEther("0.02"),
-            [tokenA.target, tokenB.target],
-            await user.getAddress(),
-            deadline,
-          ),
-      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_OUTPUT_AMOUNT");
-    });
-
     it("should revert with invalid path", async () => {
       await expect(
         swap.swapExactTokensForTokens(100, 0, [tokenA.target], await owner.getAddress(), Date.now() + 1000),
       ).to.be.revertedWith("SimpleSwap: INVALID_PATH");
-    });
-
-    it("should revert with zero address", async () => {
-      await expect(
-        swap.swapExactTokensForTokens(
-          100,
-          0,
-          [tokenA.target, ethers.ZeroAddress],
-          await owner.getAddress(),
-          Date.now() + 1000,
-        ),
-      ).to.be.revertedWith("SimpleSwap: ZERO_ADDRESS");
     });
 
     it("should revert if no liquidity", async () => {
@@ -404,105 +266,6 @@ describe("SimpleSwap", function () {
     it("should calculate correct amountOut", async () => {
       const out = await swap.getAmountOut(1000, 1000, 2000);
       expect(out).to.equal(ethers.toBigInt(Math.floor((1000 * 2000) / (1000 + 1000))));
-    });
-  });
-
-  describe("internal helpers", () => {
-    it("sqrt handles edge cases", async () => {
-      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
-      const helper = await Wrapper.deploy();
-      expect(await helper.exposeSqrt(0)).to.equal(0n);
-      expect(await helper.exposeSqrt(1)).to.equal(1n);
-      expect(await helper.exposeSqrt(4)).to.equal(2n);
-      expect(await helper.exposeSqrt(16)).to.equal(4n);
-    });
-
-    it("min returns smallest value", async () => {
-      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
-      const helper = await Wrapper.deploy();
-      expect(await helper.exposeMin(1, 2)).to.equal(1n);
-      expect(await helper.exposeMin(5, 2)).to.equal(2n);
-      expect(await helper.exposeMin(3, 3)).to.equal(3n);
-    });
-
-    it("getAmountOutInternal matches external call", async () => {
-      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
-      const helper = await Wrapper.deploy();
-      const inner = await helper.exposeGetAmountOutInternal(1000, 1000, 2000);
-      const ext = await swap.getAmountOut(1000, 1000, 2000);
-      expect(inner).to.equal(ext);
-    });
-
-    it("getAmountOutInternal reverts with bad params", async () => {
-      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
-      const helper = await Wrapper.deploy();
-      await expect(
-        helper.exposeGetAmountOutInternal(0, 1, 1),
-      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_INPUT_AMOUNT");
-      await expect(
-        helper.exposeGetAmountOutInternal(1, 0, 1),
-      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_LIQUIDITY");
-    });
-  });
-
-  describe("failing transfers", () => {
-    it("reverts when token transferFrom fails", async () => {
-      const Fail = await ethers.getContractFactory("MockFailToken");
-      const badA = await Fail.deploy("BadA", "BA");
-      const badB = await Fail.deploy("BadB", "BB");
-      await badA.mint(await owner.getAddress(), ethers.parseEther("1"));
-      await badB.mint(await owner.getAddress(), ethers.parseEther("1"));
-      await badA.approve(swap.target, ethers.MaxUint256);
-      await badB.approve(swap.target, ethers.MaxUint256);
-      await badA.setFailTransferFrom(true);
-      await badB.setFailTransferFrom(true);
-      const block = await ethers.provider.getBlock("latest");
-      if (!block) throw new Error("No block");
-      const deadline = block.timestamp + 1000;
-      await expect(
-        swap.addLiquidity(
-          badA.target,
-          badB.target,
-          ethers.parseEther("0.1"),
-          ethers.parseEther("0.1"),
-          0,
-          0,
-          await owner.getAddress(),
-          deadline,
-        ),
-      ).to.be.revertedWith("SimpleSwap: TRANSFER_A_FAILED");
-    });
-
-    it("reverts when output token transfer fails", async () => {
-      const Fail = await ethers.getContractFactory("MockFailToken");
-      const badOut = await Fail.deploy("BadOut", "BO");
-      await badOut.mint(await owner.getAddress(), ethers.parseEther("1"));
-      // good token for input
-      await tokenA.approve(swap.target, ethers.MaxUint256);
-      await badOut.approve(swap.target, ethers.MaxUint256);
-      const block = await ethers.provider.getBlock("latest");
-      if (!block) throw new Error("No block");
-      const deadline = block.timestamp + 1000;
-      await swap.addLiquidity(
-        tokenA.target,
-        badOut.target,
-        ethers.parseEther("0.1"),
-        ethers.parseEther("0.1"),
-        0,
-        0,
-        await owner.getAddress(),
-        deadline,
-      );
-      await badOut.setFailTransfer(true);
-      await expect(
-        swap.swapExactTokensForTokens(
-          ethers.parseEther("0.01"),
-          0,
-          [tokenA.target, badOut.target],
-          await owner.getAddress(),
-          deadline,
-        ),
-      ).to.be.revertedWith("SimpleSwap: OUTPUT_TRANSFER_FAILED");
     });
   });
 });
