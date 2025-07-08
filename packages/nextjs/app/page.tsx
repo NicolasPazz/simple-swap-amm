@@ -99,30 +99,10 @@ const useApproveTokens = (swapAddr: Address) => {
       txToast("error", "Public client unavailable");
       return;
     }
-    const loadingA = txToast("loading", "Approving token A...");
-    const txHashA = await writeContractAsync({
-      address: tokenAContract,
-      abi: [
-        {
-          type: "function",
-          name: "approve",
-          inputs: [
-            { name: "spender", type: "address" },
-            { name: "value", type: "uint256" },
-          ],
-          outputs: [{ type: "bool" }],
-        },
-      ],
-      functionName: "approve",
-      args: [swapAddr, parseUnits(amountA, 18)],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: txHashA });
-    toast.dismiss(loadingA);
-    txToast("success", "Token A approved", txHashA);
-    if (parseFloat(amountB) > 0) {
-      const loadingB = txToast("loading", "Approving token B...");
-      const txHashB = await writeContractAsync({
-        address: tokenBContract,
+    try {
+      const loadingA = txToast("loading", "Approving token A...");
+      const txHashA = await writeContractAsync({
+        address: tokenAContract,
         abi: [
           {
             type: "function",
@@ -135,11 +115,37 @@ const useApproveTokens = (swapAddr: Address) => {
           },
         ],
         functionName: "approve",
-        args: [swapAddr, parseUnits(amountB, 18)],
+        args: [swapAddr, parseUnits(amountA, 18)],
       });
-      await publicClient.waitForTransactionReceipt({ hash: txHashB });
-      toast.dismiss(loadingB);
-      txToast("success", "Token B approved", txHashB);
+      await publicClient.waitForTransactionReceipt({ hash: txHashA });
+      toast.dismiss(loadingA);
+      txToast("success", "Token A approved", txHashA);
+      if (parseFloat(amountB) > 0) {
+        const loadingB = txToast("loading", "Approving token B...");
+        const txHashB = await writeContractAsync({
+          address: tokenBContract,
+          abi: [
+            {
+              type: "function",
+              name: "approve",
+              inputs: [
+                { name: "spender", type: "address" },
+                { name: "value", type: "uint256" },
+              ],
+              outputs: [{ type: "bool" }],
+            },
+          ],
+          functionName: "approve",
+          args: [swapAddr, parseUnits(amountB, 18)],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: txHashB });
+        toast.dismiss(loadingB);
+        txToast("success", "Token B approved", txHashB);
+      }
+    } catch (err: any) {
+      toast.dismiss();
+      txToast("error", err.shortMessage || err.message);
+      throw err;
     }
   };
 };
@@ -147,7 +153,7 @@ const useApproveTokens = (swapAddr: Address) => {
 /**
  * getPrice
  */
-const SwapGetPrice = () => {
+const Price = () => {
   const [tokenA, setA] = useState("");
   const [tokenB, setB] = useState("");
   const shouldRead = Boolean(tokenA && tokenB);
@@ -195,7 +201,7 @@ const SwapGetPrice = () => {
 /**
  * totalLiquidity
  */
-const SwapGetLiquidity = () => {
+const Liquidity = () => {
   const [tokenA, setA] = useState("");
   const [tokenB, setB] = useState("");
   const shouldRead = Boolean(tokenA && tokenB);
@@ -243,7 +249,7 @@ const SwapGetLiquidity = () => {
 /**
  * addLiquidity
  */
-const SwapAddLiquidity = () => {
+const AddLiquidity = () => {
   const { address } = useAccount();
   const [form, setForm] = useState({
     tokenA: "",
@@ -306,32 +312,38 @@ const SwapAddLiquidity = () => {
     const tokenBAddress = getAddress(form.tokenB);
 
     setLoading(true);
-    await approveTokens({
-      tokenAContract: tokenAAddress,
-      tokenBContract: tokenBAddress,
-      amountA: form.amountADesired,
-      amountB: form.amountBDesired,
-    });
+    try {
+      await approveTokens({
+        tokenAContract: tokenAAddress,
+        tokenBContract: tokenBAddress,
+        amountA: form.amountADesired,
+        amountB: form.amountBDesired,
+      });
 
-    await write(
-      {
-        functionName: "addLiquidity",
-        args: [
-          tokenAAddress,
-          tokenBAddress,
-          parseUnits(form.amountADesired, 18),
-          parseUnits(form.amountBDesired, 18),
-          parseUnits(form.amountAMin, 18),
-          parseUnits(form.amountBMin, 18),
-          address as Address,
-          BigInt(form.deadline),
-        ],
-      },
-      {
-        onBlockConfirmation: tx => txToast("success", "Liquidity added", tx.transactionHash),
-      },
-    );
-    setLoading(false);
+      await write(
+        {
+          functionName: "addLiquidity",
+          args: [
+            tokenAAddress,
+            tokenBAddress,
+            parseUnits(form.amountADesired, 18),
+            parseUnits(form.amountBDesired, 18),
+            parseUnits(form.amountAMin, 18),
+            parseUnits(form.amountBMin, 18),
+            address as Address,
+            BigInt(form.deadline),
+          ],
+        },
+        {
+          onBlockConfirmation: tx =>
+            txToast("success", "Liquidity added", tx.transactionHash),
+        },
+      );
+    } catch (err: any) {
+      txToast("error", err.shortMessage || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -366,7 +378,7 @@ const SwapAddLiquidity = () => {
 /**
  * removeLiquidity
  */
-const SwapRemoveLiquidity = () => {
+const RemoveLiquidity = () => {
   const { address } = useAccount();
   const [form, setForm] = useState({
     tokenA: "",
@@ -413,26 +425,31 @@ const SwapRemoveLiquidity = () => {
       return;
     }
     setLoading(true);
-    await write(
-      {
-        functionName: "removeLiquidity",
-        args: [
-          form.tokenA as Address,
-          form.tokenB as Address,
-          parseUnits(form.liquidity, 18),
-          parseUnits(form.amountAMin, 18),
-          parseUnits(form.amountBMin, 18),
-          address as Address,
-          BigInt(form.deadline),
-        ],
-      },
-      {
-        onBlockConfirmation: tx => {
-          txToast("success", "Liquidity removed", tx.transactionHash);
+    try {
+      await write(
+        {
+          functionName: "removeLiquidity",
+          args: [
+            form.tokenA as Address,
+            form.tokenB as Address,
+            parseUnits(form.liquidity, 18),
+            parseUnits(form.amountAMin, 18),
+            parseUnits(form.amountBMin, 18),
+            address as Address,
+            BigInt(form.deadline),
+          ],
         },
-      },
-    );
-    setLoading(false);
+        {
+          onBlockConfirmation: tx => {
+            txToast("success", "Liquidity removed", tx.transactionHash);
+          },
+        },
+      );
+    } catch (err: any) {
+      txToast("error", err.shortMessage || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -466,7 +483,7 @@ const SwapRemoveLiquidity = () => {
 /**
  * getAmountOut
  */
-const SwapGetOut = () => {
+const AmountOut = () => {
   const [inp, setInp] = useState({ amountIn: "", reserveIn: "", reserveOut: "" });
   const shouldRead = Boolean(inp.amountIn && inp.reserveIn && inp.reserveOut);
   const { data } = useScaffoldReadContract(
@@ -507,7 +524,7 @@ const SwapGetOut = () => {
 /**
  * swapExactTokensForTokens
  */
-const SwapSwap = () => {
+const Swap = () => {
   const { address } = useAccount();
   const [form, setForm] = useState({
     amountIn: "",
@@ -576,29 +593,35 @@ const SwapSwap = () => {
     const tokenOutAddress = getAddress(form.tokenOut);
 
     setLoading(true);
-    await approveTokens({
-      tokenAContract: tokenInAddress,
-      tokenBContract: tokenOutAddress,
-      amountA: form.amountIn,
-      amountB: "0",
-    });
+    try {
+      await approveTokens({
+        tokenAContract: tokenInAddress,
+        tokenBContract: tokenOutAddress,
+        amountA: form.amountIn,
+        amountB: "0",
+      });
 
-    await write(
-      {
-        functionName: "swapExactTokensForTokens",
-        args: [
-          parseUnits(form.amountIn, 18),
-          parseUnits(form.amountOutMin, 18),
-          [tokenInAddress, tokenOutAddress],
-          address as Address,
-          BigInt(form.deadline),
-        ],
-      },
-      {
-        onBlockConfirmation: tx => txToast("success", "Swapped", tx.transactionHash),
-      },
-    );
-    setLoading(false);
+      await write(
+        {
+          functionName: "swapExactTokensForTokens",
+          args: [
+            parseUnits(form.amountIn, 18),
+            parseUnits(form.amountOutMin, 18),
+            [tokenInAddress, tokenOutAddress],
+            address as Address,
+            BigInt(form.deadline),
+          ],
+        },
+        {
+          onBlockConfirmation: tx =>
+            txToast("success", "Swapped", tx.transactionHash),
+        },
+      );
+    } catch (err: any) {
+      txToast("error", err.shortMessage || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -658,12 +681,12 @@ export default function Page() {
       </div>
       <LPBalance />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 w-full max-w-7xl">
-        <SwapGetPrice />
-        <SwapGetLiquidity />
-        <SwapAddLiquidity />
-        <SwapRemoveLiquidity />
-        <SwapGetOut />
-        <SwapSwap />
+        <Price />
+        <Liquidity />
+        <AddLiquidity />
+        <RemoveLiquidity />
+        <AmountOut />
+        <Swap />
       </div>
     </div>
   );

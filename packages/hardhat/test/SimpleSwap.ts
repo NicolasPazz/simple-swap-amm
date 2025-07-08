@@ -411,4 +411,62 @@ describe("SimpleSwap", function () {
       ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_LIQUIDITY");
     });
   });
+
+  describe("failing transfers", () => {
+    it("reverts when token transferFrom fails", async () => {
+      const Fail = await ethers.getContractFactory("MockFailToken");
+      const badA = await Fail.deploy("BadA", "BA");
+      const badB = await Fail.deploy("BadB", "BB");
+      await badA.mint(await owner.getAddress(), ethers.parseEther("1"));
+      await badB.mint(await owner.getAddress(), ethers.parseEther("1"));
+      await badA.approve(swap.target, ethers.MaxUint256);
+      await badB.approve(swap.target, ethers.MaxUint256);
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) throw new Error("No block");
+      const deadline = block.timestamp + 1000;
+      await expect(
+        swap.addLiquidity(
+          badA.target,
+          badB.target,
+          ethers.parseEther("0.1"),
+          ethers.parseEther("0.1"),
+          0,
+          0,
+          await owner.getAddress(),
+          deadline,
+        ),
+      ).to.be.revertedWith("SimpleSwap: TRANSFER_A_FAILED");
+    });
+
+    it("reverts when output token transfer fails", async () => {
+      const Fail = await ethers.getContractFactory("MockFailToken");
+      const badOut = await Fail.deploy("BadOut", "BO");
+      await badOut.mint(await owner.getAddress(), ethers.parseEther("1"));
+      // good token for input
+      await tokenA.approve(swap.target, ethers.MaxUint256);
+      await badOut.approve(swap.target, ethers.MaxUint256);
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) throw new Error("No block");
+      const deadline = block.timestamp + 1000;
+      await swap.addLiquidity(
+        tokenA.target,
+        badOut.target,
+        ethers.parseEther("0.1"),
+        ethers.parseEther("0.1"),
+        0,
+        0,
+        await owner.getAddress(),
+        deadline,
+      );
+      await expect(
+        swap.swapExactTokensForTokens(
+          ethers.parseEther("0.01"),
+          0,
+          [tokenA.target, badOut.target],
+          await owner.getAddress(),
+          deadline,
+        ),
+      ).to.be.revertedWith("SimpleSwap: OUTPUT_TRANSFER_FAILED");
+    });
+  });
 });
