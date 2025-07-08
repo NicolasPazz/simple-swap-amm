@@ -20,6 +20,8 @@ const contractName = "SimpleSwap";
 type TokenProps = { name: "BOOKE" | "MIAMI" };
 
 const TokenClaim = ({ name }: TokenProps) => {
+  const displayName =
+    name === "BOOKE" ? "BOOKE (Bokita Coin)" : "MIAMI (General Coin)";
   const { address } = useAccount();
   const [amount, setAmount] = useState("");
   const tokenAddr = (deployed as Record<number, any>)[CHAIN_ID][name].address as Address;
@@ -56,9 +58,9 @@ const TokenClaim = ({ name }: TokenProps) => {
   };
 
   return (
-    <div className="card w-full max-w-md bg-base-200 shadow-lg p-6 space-y-3">
-      <h2 className="text-xl font-bold">
-        {name}
+    <div className="card w-full max-w-md bg-gradient-to-br from-primary/40 to-secondary/40 shadow-lg p-6 space-y-3">
+      <h2 className="text-xl font-bold text-primary-content">
+        {displayName}
         <span className="block text-xs break-all text-neutral-400">{tokenAddr}</span>
       </h2>
       <input
@@ -157,7 +159,7 @@ const SwapGetPrice = () => {
   }
 
   return (
-    <div className="card bg-base-200 p-4 space-y-2">
+    <div className="card bg-secondary/30 p-4 space-y-2">
       <h3 className="font-bold">getPrice</h3>
       <input
         className="input input-bordered w-full"
@@ -205,7 +207,7 @@ const SwapGetLiquidity = () => {
   }
 
   return (
-    <div className="card bg-base-200 p-4 space-y-2">
+    <div className="card bg-secondary/30 p-4 space-y-2">
       <h3 className="font-bold">getLiquidity</h3>
       <input
         className="input input-bordered w-full"
@@ -276,7 +278,7 @@ const SwapAddLiquidity = () => {
   };
 
   return (
-    <div className="card bg-base-200 p-4 space-y-2">
+    <div className="card bg-secondary/30 p-4 space-y-2">
       <h3 className="font-bold">addLiquidity</h3>
       {(["tokenA", "tokenB", "amountADesired", "amountBDesired", "amountAMin", "amountBMin", "deadline"] as const).map(
         k => (
@@ -339,7 +341,7 @@ const SwapRemoveLiquidity = () => {
     );
 
   return (
-    <div className="card bg-base-200 p-4 space-y-2">
+    <div className="card bg-secondary/30 p-4 space-y-2">
       <h3 className="font-bold">removeLiquidity</h3>
       {(["tokenA", "tokenB", "liquidity", "amountAMin", "amountBMin", "deadline"] as const).map(k => (
         <input
@@ -378,7 +380,7 @@ const SwapGetOut = () => {
   );
 
   return (
-    <div className="card bg-base-200 p-4 space-y-2">
+    <div className="card bg-secondary/30 p-4 space-y-2">
       <h3 className="font-bold">getAmountOut</h3>
       {(["amountIn", "reserveIn", "reserveOut"] as const).map(k => (
         <input
@@ -440,7 +442,7 @@ const SwapSwap = () => {
   };
 
   return (
-    <div className="card bg-base-200 p-4 space-y-2">
+    <div className="card bg-secondary/30 p-4 space-y-2">
       <h3 className="font-bold">swapExactTokensForTokens</h3>
       {(["amountIn", "amountOutMin", "tokenIn", "tokenOut", "deadline"] as const).map(k => (
         <input
@@ -458,16 +460,35 @@ const SwapSwap = () => {
   );
 };
 
+/** LP Token balance */
+const LPBalance = () => {
+  const { address } = useAccount();
+  const { data } = useScaffoldReadContract({
+    contractName,
+    functionName: "balanceOf",
+    args: [address as Address],
+    watch: true,
+  });
+
+  return (
+    <div className="card bg-gradient-to-br from-secondary/40 to-accent/40 p-4 text-center">
+      <h3 className="font-bold">Your LP Tokens</h3>
+      <p className="text-lg">{data ? formatUnits(data, 18) : "0"} LP</p>
+    </div>
+  );
+};
+
 /* -------------------------------------------------------------------------- */
 /*                                    PAGE                                    */
 /* -------------------------------------------------------------------------- */
 export default function Page() {
   return (
-    <div className="flex flex-col items-center gap-10 py-10">
+    <div className="flex flex-col items-center gap-10 py-10 bg-gradient-to-r from-base-200 to-base-300">
       <div className="flex flex-col lg:flex-row gap-6">
         <TokenClaim name="BOOKE" />
         <TokenClaim name="MIAMI" />
       </div>
+      <LPBalance />
       <div className="grid lg:grid-cols-6 gap-6 w-full max-w-7xl">
         <SwapGetPrice />
         <SwapGetLiquidity />
