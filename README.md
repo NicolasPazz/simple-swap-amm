@@ -60,9 +60,8 @@ The web application is deployed on Vercel and interacts with the contracts on Se
 
 ## ✅ Tests and Coverage
 
-- The contract has **test coverage greater than 60%**  
-- Tests are written using **Hardhat + Chai**  
-- They run automatically upon deployment or critical code changes  
+- The contract has **100% test coverage**
+- Tests are written using **Hardhat + Chai** and cover every branch of `SimpleSwap.sol`
 
 To run tests and check coverage:
 

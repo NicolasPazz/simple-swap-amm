@@ -268,4 +268,29 @@ describe("SimpleSwap", function () {
       expect(out).to.equal(ethers.toBigInt(Math.floor((1000 * 2000) / (1000 + 1000))));
     });
   });
+
+  describe("internal helpers", () => {
+    it("sqrt handles edge cases", async () => {
+      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
+      const helper = await Wrapper.deploy();
+      expect(await helper.exposeSqrt(0)).to.equal(0n);
+      expect(await helper.exposeSqrt(1)).to.equal(1n);
+      expect(await helper.exposeSqrt(4)).to.equal(2n);
+    });
+
+    it("min returns smallest value", async () => {
+      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
+      const helper = await Wrapper.deploy();
+      expect(await helper.exposeMin(1, 2)).to.equal(1n);
+      expect(await helper.exposeMin(5, 2)).to.equal(2n);
+    });
+
+    it("getAmountOutInternal matches external call", async () => {
+      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
+      const helper = await Wrapper.deploy();
+      const inner = await helper.exposeGetAmountOutInternal(1000, 1000, 2000);
+      const ext = await swap.getAmountOut(1000, 1000, 2000);
+      expect(inner).to.equal(ext);
+    });
+  });
 });
