@@ -20,14 +20,20 @@ export const txToast = (
   message: string,
   txHash?: string,
 ) => {
-  const link = txHash
-    ? `https://sepolia.etherscan.io/tx/${txHash}`
-    : undefined;
-  return toast.custom((t: Toast) => (
+  const link = txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : undefined;
+  const icons: Record<ToastType, string> = {
+    success: "✔",
+    error: "⚠",
+    loading: "⏳",
+  };
+  const id = toast.custom((t: Toast) => (
     <div
       className={`relative flex flex-col gap-1 p-4 rounded-xl shadow-lg text-base-100 ${colors[type]}`}
     >
-      <span className="font-semibold">{message}</span>
+      <div className="flex items-center gap-2">
+        <span>{icons[type]}</span>
+        <span className="font-semibold">{message}</span>
+      </div>
       {link && (
         <a
           href={link}
@@ -46,4 +52,5 @@ export const txToast = (
       </button>
     </div>
   ));
+  return id;
 };

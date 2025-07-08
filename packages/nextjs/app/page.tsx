@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 import { txToast } from "../components/TxToast";
 import { Address, formatUnits, parseUnits, isAddress, getAddress } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
@@ -72,7 +73,7 @@ const TokenClaim = ({ name }: TokenProps) => {
         step="any"
         placeholder="Amount to mint"
         value={amount}
-        onChange={e => setAmount(e.target.value)}
+        onChange={e => setAmount(e.target.value.replace(/,/g, "."))}
       />
       <button className="btn btn-primary w-full" disabled={!address || !amount || isPending} onClick={claim}>
         {isPending ? "Sending…" : "Claim"}
@@ -98,7 +99,7 @@ const useApproveTokens = (swapAddr: Address) => {
       txToast("error", "Public client unavailable");
       return;
     }
-
+    const loadingA = txToast("loading", "Approving token A...");
     const txHashA = await writeContractAsync({
       address: tokenAContract,
       abi: [
@@ -116,8 +117,10 @@ const useApproveTokens = (swapAddr: Address) => {
       args: [swapAddr, parseUnits(amountA, 18)],
     });
     await publicClient.waitForTransactionReceipt({ hash: txHashA });
+    toast.dismiss(loadingA);
     txToast("success", "Token A approved", txHashA);
     if (parseFloat(amountB) > 0) {
+      const loadingB = txToast("loading", "Approving token B...");
       const txHashB = await writeContractAsync({
         address: tokenBContract,
         abi: [
@@ -135,13 +138,11 @@ const useApproveTokens = (swapAddr: Address) => {
         args: [swapAddr, parseUnits(amountB, 18)],
       });
       await publicClient.waitForTransactionReceipt({ hash: txHashB });
+      toast.dismiss(loadingB);
       txToast("success", "Token B approved", txHashB);
     }
   };
 };
-
-/* --------------------- SIMPLE SWAP --------------------- */
-const useToastWrite = (c: "BOOKE" | "MIAMI" | "SimpleSwap") => useScaffoldWriteContract(c).writeContractAsync;
 
 /**
  * getPrice
@@ -256,7 +257,8 @@ const SwapAddLiquidity = () => {
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
 
   const approveTokens = useApproveTokens(swapAddr);
-  const write = useScaffoldWriteContract(contractName).writeContractAsync;
+  const { writeContractAsync: write, isMining } = useScaffoldWriteContract({ contractName });
+  const [loading, setLoading] = useState(false);
 
   const handleAddChange = (key: string, value: string) => {
     if (key.includes("amount") && value) value = value.replace(/,/g, ".");
@@ -303,6 +305,7 @@ const SwapAddLiquidity = () => {
     const tokenAAddress = getAddress(form.tokenA);
     const tokenBAddress = getAddress(form.tokenB);
 
+    setLoading(true);
     await approveTokens({
       tokenAContract: tokenAAddress,
       tokenBContract: tokenBAddress,
@@ -328,6 +331,7 @@ const SwapAddLiquidity = () => {
         onBlockConfirmation: tx => txToast("success", "Liquidity added", tx.transactionHash),
       },
     );
+    setLoading(false);
   };
 
   return (
@@ -352,8 +356,8 @@ const SwapAddLiquidity = () => {
           {addErrors[k] && <small className="text-red-500">{addErrors[k]}</small>}
         </div>
       ))}
-      <button className="btn btn-primary w-full" onClick={add}>
-        add
+      <button className="btn btn-primary w-full" disabled={loading || isMining} onClick={add}>
+        {loading || isMining ? <span className="loading loading-spinner" /> : "add"}
       </button>
     </div>
   );
@@ -373,7 +377,8 @@ const SwapRemoveLiquidity = () => {
     deadline: getDefaultDeadline(),
   });
   const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
-  const write = useToastWrite(contractName);
+  const { writeContractAsync: write, isMining } = useScaffoldWriteContract({ contractName });
+  const [loading, setLoading] = useState(false);
 
   const handleRemoveChange = (key: string, value: string) => {
     if (key.includes("amount") && value) value = value.replace(/,/g, ".");
@@ -402,12 +407,13 @@ const SwapRemoveLiquidity = () => {
     setRemoveErrors(prev => ({ ...prev, [key]: msg }));
   };
 
-  const remove = () => {
+  const remove = async () => {
     if (!isAddress(form.tokenA) || !isAddress(form.tokenB) || form.tokenA === form.tokenB) {
       txToast("error", "Invalid token address");
       return;
     }
-    write(
+    setLoading(true);
+    await write(
       {
         functionName: "removeLiquidity",
         args: [
@@ -426,6 +432,7 @@ const SwapRemoveLiquidity = () => {
         },
       },
     );
+    setLoading(false);
   };
 
   return (
@@ -449,8 +456,8 @@ const SwapRemoveLiquidity = () => {
           {removeErrors[k] && <small className="text-red-500">{removeErrors[k]}</small>}
         </div>
       ))}
-      <button className="btn btn-primary w-full" onClick={remove}>
-        remove
+      <button className="btn btn-primary w-full" disabled={loading || isMining} onClick={remove}>
+        {loading || isMining ? <span className="loading loading-spinner" /> : "remove"}
       </button>
     </div>
   );
@@ -510,8 +517,23 @@ const SwapSwap = () => {
     deadline: getDefaultDeadline(),
   });
   const [swapErrors, setSwapErrors] = useState<Record<string, string>>({});
-  const write = useScaffoldWriteContract(contractName).writeContractAsync;
+  const { writeContractAsync: write, isMining } = useScaffoldWriteContract({ contractName });
+  const [loading, setLoading] = useState(false);
   const approveTokens = useApproveTokens(swapAddr);
+  const { data: priceData } = useScaffoldReadContract(
+    form.tokenIn && form.tokenOut
+      ? {
+          contractName,
+          functionName: "getPrice",
+          args: [form.tokenIn as Address, form.tokenOut as Address],
+          watch: true,
+        }
+      : {
+          contractName,
+          functionName: "getPrice",
+          args: [undefined, undefined],
+        },
+  );
 
   const handleSwapChange = (key: string, value: string) => {
     if (key.includes("amount") && value) value = value.replace(/,/g, ".");
@@ -531,9 +553,10 @@ const SwapSwap = () => {
     } else if (key === "amountIn" || key === "amountOutMin") {
       if (value && Number(value) <= 0) msg = "Must be greater than 0";
       if (key === "amountOutMin" && form.amountIn) {
-        const suggested = Number(form.amountIn) * 0.95;
-        if (Number(value) < suggested) {
-          msg = `Valid range: minimum ${suggested}`;
+        const price = priceData ? Number(formatUnits(priceData, 18)) : 0;
+        const suggested = Number(form.amountIn) * price * 0.95;
+        if (price > 0 && Number(value) < suggested) {
+          msg = `Valid range: minimum ${suggested.toFixed(4)}`;
         }
       }
     } else if (key === "deadline") {
@@ -552,6 +575,7 @@ const SwapSwap = () => {
     const tokenInAddress = getAddress(form.tokenIn);
     const tokenOutAddress = getAddress(form.tokenOut);
 
+    setLoading(true);
     await approveTokens({
       tokenAContract: tokenInAddress,
       tokenBContract: tokenOutAddress,
@@ -574,6 +598,7 @@ const SwapSwap = () => {
         onBlockConfirmation: tx => txToast("success", "Swapped", tx.transactionHash),
       },
     );
+    setLoading(false);
   };
 
   return (
@@ -596,8 +621,8 @@ const SwapSwap = () => {
           {swapErrors[k] && <small className="text-red-500">{swapErrors[k]}</small>}
         </div>
       ))}
-      <button className="btn btn-primary w-full" onClick={swap}>
-        swap
+      <button className="btn btn-primary w-full" disabled={loading || isMining} onClick={swap}>
+        {loading || isMining ? <span className="loading loading-spinner" /> : "swap"}
       </button>
     </div>
   );

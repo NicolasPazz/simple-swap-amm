@@ -68,6 +68,13 @@ cd packages/hardhat
 yarn coverage
 ```
 
+To start the frontend locally:
+
+```bash
+cd packages/nextjs
+yarn dev
+```
+
 ---
 
 ## 🚀 Deployment and Verification

@@ -94,6 +94,12 @@ export const Header = () => {
           <div className="flex flex-col">
             <span className="font-bold leading-tight">Simple Swap</span>
             <span className="text-xs">Swap instantly</span>
+            <span className="text-[10px]">
+              by{' '}
+              <a href="https://github.com/NicolasPazz" target="_blank" rel="noreferrer" className="underline">
+                Nicolas Paz
+              </a>
+            </span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">

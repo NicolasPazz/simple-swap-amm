@@ -82,6 +82,18 @@ describe("SimpleSwap", function () {
       ).to.be.revertedWith("SimpleSwap: IDENTICAL_ADDRESSES");
     });
 
+    it("should revert with zero address", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) {
+        throw new Error("No block data available");
+      }
+      const deadline = block.timestamp + 1000;
+
+      await expect(
+        swap.addLiquidity(tokenA.target, ethers.ZeroAddress, 1, 1, 0, 0, await owner.getAddress(), deadline),
+      ).to.be.revertedWith("SimpleSwap: ZERO_ADDRESS");
+    });
+
     it("should calculate optimal amounts on second liquidity add", async () => {
       const block = await ethers.provider.getBlock("latest");
       if (!block) {
@@ -213,6 +225,20 @@ describe("SimpleSwap", function () {
         ),
       ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_OUTPUT_AMOUNT");
     });
+
+    it("should revert with zero address", async () => {
+      await expect(
+        swap.removeLiquidity(
+          ethers.ZeroAddress,
+          tokenB.target,
+          1,
+          0,
+          0,
+          await owner.getAddress(),
+          Date.now() + 1000,
+        ),
+      ).to.be.revertedWith("SimpleSwap: ZERO_ADDRESS");
+    });
   });
 
   describe("swapExactTokensForTokens", () => {
@@ -286,6 +312,18 @@ describe("SimpleSwap", function () {
       await expect(
         swap.swapExactTokensForTokens(100, 0, [tokenA.target], await owner.getAddress(), Date.now() + 1000),
       ).to.be.revertedWith("SimpleSwap: INVALID_PATH");
+    });
+
+    it("should revert with zero address", async () => {
+      await expect(
+        swap.swapExactTokensForTokens(
+          100,
+          0,
+          [tokenA.target, ethers.ZeroAddress],
+          await owner.getAddress(),
+          Date.now() + 1000,
+        ),
+      ).to.be.revertedWith("SimpleSwap: ZERO_ADDRESS");
     });
 
     it("should revert if no liquidity", async () => {
