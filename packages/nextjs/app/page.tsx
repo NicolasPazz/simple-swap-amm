@@ -9,8 +9,10 @@ import { useWriteContract } from "wagmi";
 import deployed from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth/useScaffoldWriteContract";
+import scaffoldConfig from "~~/scaffold.config";
 
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 31337;
+const CHAIN_ID =
+  Number(process.env.NEXT_PUBLIC_CHAIN_ID) || scaffoldConfig.targetNetworks[0].id;
 const swapAddr = (deployed as Record<number, any>)[CHAIN_ID].SimpleSwap.address as Address;
 const contractName = "SimpleSwap";
 
