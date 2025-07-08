@@ -14,7 +14,7 @@ All interactions are protected with input validation and `deadline` constraints 
 
 ---
 
-## 🌐 Frontend on Vercel (Next.js + Scaffold-ETH)
+## 🌐 Frontend on Vercel (Next.js)
 
 The web application is deployed on Vercel and interacts with the contracts on Sepolia.
 >🔗 Live Demo: https://simple-swap-amm-nextjs.vercel.app/
@@ -60,15 +60,25 @@ The web application is deployed on Vercel and interacts with the contracts on Se
 
 ## ✅ Tests and Coverage
 
-- The contract has **test coverage greater than 60%**  
-- Tests are written using **Hardhat + Chai**  
-- They run automatically upon deployment or critical code changes  
+The smart contracts reach **100% coverage** across statements, branches, functions, and lines. Running `npx hardhat coverage` from `packages/hardhat` prints a summary like:
 
-To run tests and check coverage:
+```
+File              | % Stmts | % Branch | % Funcs | % Lines |
+------------------|--------|---------|--------|--------|
+SimpleSwap.sol    | 100    | 100     | 100    | 100    |
+```
+Tests use **Hardhat** and **Chai**. Run them with:
 
 ```bash
 cd packages/hardhat
-yarn coverage
+npx hardhat coverage
+```
+
+To start the frontend locally:
+
+```bash
+cd packages/nextjs
+yarn dev
 ```
 
 ---
@@ -155,7 +165,7 @@ simpleSwap.swapExactTokensForTokens(
 simple-swap/
 ├── packages/
 │   ├── hardhat/         # Contracts and deployment scripts
-│   └── nextjs/          # Frontend using Next.js + Scaffold-ETH
+│   └── nextjs/          # Next.js frontend
 ├── deployments/         # Contracts generated at deploy time (copied to frontend)
 ```
 
@@ -164,3 +174,7 @@ simple-swap/
 ## 🧾 License
 
 MIT © 2025
+
+---
+
+Made by [Nicolas Paz](https://github.com/NicolasPazz)
