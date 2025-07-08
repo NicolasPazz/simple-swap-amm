@@ -3,7 +3,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Address, formatUnits, parseUnits } from "viem";
-import { getAddress, isAddress } from "viem";
+import { getAddress } from "viem";
+import { ethers } from "ethers";
 import { useAccount } from "wagmi";
 import { useWriteContract } from "wagmi";
 import deployed from "~~/contracts/deployedContracts";
@@ -16,6 +17,7 @@ const CHAIN_ID =
   Number(process.env.NEXT_PUBLIC_CHAIN_ID) || scaffoldConfig.targetNetworks[0].id;
 const swapAddr = (deployed as Record<number, any>)[CHAIN_ID].SimpleSwap.address as Address;
 const contractName = "SimpleSwap";
+const defaultDeadline = Math.floor(Date.now() / 1000 + 60 * 60).toString();
 
 /* ------------------------- TOKENS ------------------------- */
 type TokenProps = { name: "BOOKE" | "MIAMI" };
@@ -165,17 +167,17 @@ const SwapGetPrice = () => {
   }
 
   return (
-    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
+    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2 transition-shadow hover:shadow-xl">
       <h3 className="font-bold">Price</h3>
       <input
         className="input input-bordered w-full"
-        placeholder="Token A address (0x...)"
+        placeholder="token A address"
         value={tokenA}
         onChange={e => setA(e.target.value)}
       />
       <input
         className="input input-bordered w-full"
-        placeholder="Token B address (0x...)"
+        placeholder="token B address"
         value={tokenB}
         onChange={e => setB(e.target.value)}
       />
@@ -213,17 +215,17 @@ const SwapGetLiquidity = () => {
   }
 
   return (
-    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
+    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2 transition-shadow hover:shadow-xl">
       <h3 className="font-bold">Liquidity</h3>
       <input
         className="input input-bordered w-full"
-        placeholder="Token A address (0x...)"
+        placeholder="token A address"
         value={tokenA}
         onChange={e => setA(e.target.value)}
       />
       <input
         className="input input-bordered w-full"
-        placeholder="Token B address (0x...)"
+        placeholder="token B address"
         value={tokenB}
         onChange={e => setB(e.target.value)}
       />
@@ -237,7 +239,6 @@ const SwapGetLiquidity = () => {
  */
 const SwapAddLiquidity = () => {
   const { address } = useAccount();
-  const defaultDeadline = Math.floor(Date.now() / 1000 + 60 * 60).toString();
   const [f, sF] = useState({
     tokenA: "",
     tokenB: "",
@@ -247,12 +248,47 @@ const SwapAddLiquidity = () => {
     amountBMin: "",
     deadline: defaultDeadline,
   });
+  const [addErrors, setAddErrors] = useState<Record<string, string>>({});
 
   const approveTokens = useApproveTokens(swapAddr);
   const write = useScaffoldWriteContract(contractName).writeContractAsync;
 
+  const handleAddChange = (key: string, value: string) => {
+    sF(prev => ({ ...prev, [key]: value }));
+    let msg = "";
+    if (key === "tokenA" || key === "tokenB") {
+      if (value && !ethers.utils.isAddress(value)) {
+        msg = "Formato de dirección inválido";
+      } else if (key === "tokenB" && value === f.tokenA) {
+        msg = "Debe ser distinto de la otra dirección";
+        setAddErrors(prev => ({ ...prev, tokenA: "Debe ser distinto de la otra dirección" }));
+      } else if (key === "tokenA" && value === f.tokenB) {
+        msg = "Debe ser distinto de la otra dirección";
+        setAddErrors(prev => ({ ...prev, tokenB: "Debe ser distinto de la otra dirección" }));
+      } else {
+        if (key === "tokenB") setAddErrors(prev => ({ ...prev, tokenA: "" }));
+        if (key === "tokenA") setAddErrors(prev => ({ ...prev, tokenB: "" }));
+      }
+    } else if (key === "amountADesired" || key === "amountBDesired") {
+      if (value && Number(value) <= 0) msg = "Debe ser mayor a 0";
+    } else if (key === "amountAMin") {
+      const val = Number(value);
+      if (val <= 0) msg = "Debe ser mayor a 0";
+      else if (f.amountADesired && val > Number(f.amountADesired)) {
+        msg = "Debe ser menor o igual a amountADesired";
+      }
+    } else if (key === "amountBMin") {
+      const val = Number(value);
+      if (val <= 0) msg = "Debe ser mayor a 0";
+      else if (f.amountBDesired && val > Number(f.amountBDesired)) {
+        msg = "Debe ser menor o igual a amountBDesired";
+      }
+    }
+    setAddErrors(prev => ({ ...prev, [key]: msg }));
+  };
+
   const add = async () => {
-    if (!isAddress(f.tokenA) || !isAddress(f.tokenB)) {
+    if (!ethers.utils.isAddress(f.tokenA) || !ethers.utils.isAddress(f.tokenB)) {
       toast.error("Invalid token address");
       return;
     }
@@ -285,24 +321,26 @@ const SwapAddLiquidity = () => {
   };
 
   return (
-    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
+    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2 transition-shadow hover:shadow-xl">
       <h3 className="font-bold">Add Liquidity</h3>
       {(["tokenA", "tokenB", "amountADesired", "amountBDesired", "amountAMin", "amountBMin", "deadline"] as const).map(k => (
-        <input
-          key={k}
-          className="input input-bordered w-full"
-          placeholder={{
-            tokenA: "Token A address",
-            tokenB: "Token B address",
-            amountADesired: "Desired amount A",
-            amountBDesired: "Desired amount B",
-            amountAMin: "Min amount A",
-            amountBMin: "Min amount B",
-            deadline: "Deadline (unix)",
-          }[k]}
-          value={(f as any)[k]}
-          onChange={e => sF({ ...f, [k]: e.target.value })}
-        />
+        <div key={k} className="space-y-1">
+          <input
+            className="input input-bordered w-full hover:border-primary transition-colors"
+            placeholder={{
+              tokenA: "token A address",
+              tokenB: "token B address",
+              amountADesired: "desired amount A",
+              amountBDesired: "desired amount B",
+              amountAMin: "min amount A (slippage)",
+              amountBMin: "min amount B (slippage)",
+              deadline: "deadline (unix)",
+            }[k]}
+            value={(f as any)[k]}
+            onChange={e => handleAddChange(k, e.target.value)}
+          />
+          {addErrors[k] && <small className="text-red-500">{addErrors[k]}</small>}
+        </div>
       ))}
       <button className="btn btn-primary w-full" onClick={add}>
         add
@@ -316,18 +354,45 @@ const SwapAddLiquidity = () => {
  */
 const SwapRemoveLiquidity = () => {
   const { address } = useAccount();
-  const defaultDeadlineRemove = Math.floor(Date.now() / 1000 + 60 * 60).toString();
   const [f, sF] = useState({
     tokenA: "",
     tokenB: "",
     liquidity: "",
     amountAMin: "",
     amountBMin: "",
-    deadline: defaultDeadlineRemove,
+    deadline: defaultDeadline,
   });
+  const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
   const write = useToastWrite(contractName);
 
-  const remove = () =>
+  const handleRemoveChange = (key: string, value: string) => {
+    sF(prev => ({ ...prev, [key]: value }));
+    let msg = "";
+    if (key === "tokenA" || key === "tokenB") {
+      if (value && !ethers.utils.isAddress(value)) {
+        msg = "Formato de dirección inválido";
+      } else if (key === "tokenB" && value === f.tokenA) {
+        msg = "Debe ser distinto de la otra dirección";
+      } else if (key === "tokenA" && value === f.tokenB) {
+        msg = "Debe ser distinto de la otra dirección";
+      }
+    } else if (key === "liquidity" || key === "amountAMin" || key === "amountBMin") {
+      if (value && Number(value) <= 0) msg = "Debe ser mayor a 0";
+      if (key === "amountAMin" && f.liquidity && Number(value) > Number(f.liquidity)) {
+        msg = `Rango válido: mínimo 0, máximo ${f.liquidity}`;
+      }
+      if (key === "amountBMin" && f.liquidity && Number(value) > Number(f.liquidity)) {
+        msg = `Rango válido: mínimo 0, máximo ${f.liquidity}`;
+      }
+    }
+    setRemoveErrors(prev => ({ ...prev, [key]: msg }));
+  };
+
+  const remove = () => {
+    if (!ethers.utils.isAddress(f.tokenA) || !ethers.utils.isAddress(f.tokenB) || f.tokenA === f.tokenB) {
+      toast.error("Invalid token address");
+      return;
+    }
     write(
       {
         functionName: "removeLiquidity",
@@ -353,25 +418,28 @@ const SwapRemoveLiquidity = () => {
         },
       },
     );
+  };
 
   return (
-    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
+    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2 transition-shadow hover:shadow-xl">
       <h3 className="font-bold">Remove Liquidity</h3>
       {(["tokenA", "tokenB", "liquidity", "amountAMin", "amountBMin", "deadline"] as const).map(k => (
-        <input
-          key={k}
-          className="input input-bordered w-full"
-          placeholder={{
-            tokenA: "Token A address",
-            tokenB: "Token B address",
-            liquidity: "LP tokens",
-            amountAMin: "Min amount A",
-            amountBMin: "Min amount B",
-            deadline: "Deadline (unix)",
-          }[k]}
-          value={(f as any)[k]}
-          onChange={e => sF({ ...f, [k]: e.target.value })}
-        />
+        <div key={k} className="space-y-1">
+          <input
+            className="input input-bordered w-full hover:border-primary transition-colors"
+            placeholder={{
+              tokenA: "token A address",
+              tokenB: "token B address",
+              liquidity: "lp tokens",
+              amountAMin: "min amount A (slippage)",
+              amountBMin: "min amount B (slippage)",
+              deadline: "deadline (unix)",
+            }[k]}
+            value={(f as any)[k]}
+            onChange={e => handleRemoveChange(k, e.target.value)}
+          />
+          {removeErrors[k] && <small className="text-red-500">{removeErrors[k]}</small>}
+        </div>
       ))}
       <button className="btn btn-primary w-full" onClick={remove}>
         remove
@@ -401,16 +469,16 @@ const SwapGetOut = () => {
   );
 
   return (
-    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
+    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2 transition-shadow hover:shadow-xl">
       <h3 className="font-bold">Amount Out</h3>
       {(["amountIn", "reserveIn", "reserveOut"] as const).map(k => (
         <input
           key={k}
-          className="input input-bordered w-full"
+          className="input input-bordered w-full hover:border-primary transition-colors"
           placeholder={{
-            amountIn: "Amount in",
-            reserveIn: "Reserve in",
-            reserveOut: "Reserve out",
+            amountIn: "amount in",
+            reserveIn: "reserve in",
+            reserveOut: "reserve out",
           }[k]}
           value={(inp as any)[k]}
           onChange={e => setInp({ ...inp, [k]: e.target.value })}
@@ -426,19 +494,47 @@ const SwapGetOut = () => {
  */
 const SwapSwap = () => {
   const { address } = useAccount();
-  const defaultDeadlineSwap = Math.floor(Date.now() / 1000 + 60 * 60).toString();
   const [f, sF] = useState({
     amountIn: "",
     amountOutMin: "",
     tokenIn: "",
     tokenOut: "",
-    deadline: defaultDeadlineSwap,
+    deadline: defaultDeadline,
   });
+  const [swapErrors, setSwapErrors] = useState<Record<string, string>>({});
   const write = useScaffoldWriteContract(contractName).writeContractAsync;
   const approveTokens = useApproveTokens(swapAddr);
 
+  const handleSwapChange = (key: string, value: string) => {
+    sF(prev => ({ ...prev, [key]: value }));
+    let msg = "";
+    if (key === "tokenIn" || key === "tokenOut") {
+      if (value && !ethers.utils.isAddress(value)) {
+        msg = "Formato de dirección inválido";
+      } else if (key === "tokenOut" && value === f.tokenIn) {
+        msg = "Debe ser distinto de la otra dirección";
+        setSwapErrors(prev => ({ ...prev, tokenIn: "Debe ser distinto de la otra dirección" }));
+      } else if (key === "tokenIn" && value === f.tokenOut) {
+        msg = "Debe ser distinto de la otra dirección";
+        setSwapErrors(prev => ({ ...prev, tokenOut: "Debe ser distinto de la otra dirección" }));
+      } else {
+        if (key === "tokenOut") setSwapErrors(prev => ({ ...prev, tokenIn: "" }));
+        if (key === "tokenIn") setSwapErrors(prev => ({ ...prev, tokenOut: "" }));
+      }
+    } else if (key === "amountIn" || key === "amountOutMin") {
+      if (value && Number(value) <= 0) msg = "Debe ser mayor a 0";
+      if (key === "amountOutMin" && f.amountIn) {
+        const suggested = Number(f.amountIn) * 0.95;
+        if (Number(value) < suggested) {
+          msg = `Rango válido: mínimo ${suggested}`;
+        }
+      }
+    }
+    setSwapErrors(prev => ({ ...prev, [key]: msg }));
+  };
+
   const swap = async () => {
-    if (!isAddress(f.tokenIn) || !isAddress(f.tokenOut)) {
+    if (!ethers.utils.isAddress(f.tokenIn) || !ethers.utils.isAddress(f.tokenOut)) {
       toast.error("Invalid token address");
       return;
     }
@@ -468,22 +564,24 @@ const SwapSwap = () => {
   };
 
   return (
-    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
+    <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2 transition-shadow hover:shadow-xl">
       <h3 className="font-bold">Swap</h3>
       {(["amountIn", "amountOutMin", "tokenIn", "tokenOut", "deadline"] as const).map(k => (
-        <input
-          key={k}
-          className="input input-bordered w-full"
-          placeholder={{
-            amountIn: "Amount in",
-            amountOutMin: "Min amount out",
-            tokenIn: "Token in address",
-            tokenOut: "Token out address",
-            deadline: "Deadline (unix)",
-          }[k]}
-          value={(f as any)[k]}
-          onChange={e => sF({ ...f, [k]: e.target.value })}
-        />
+        <div key={k} className="space-y-1">
+          <input
+            className="input input-bordered w-full hover:border-primary transition-colors"
+            placeholder={{
+              amountIn: "amount in",
+              amountOutMin: "min amount out (slippage)",
+              tokenIn: "token in address",
+              tokenOut: "token out address",
+              deadline: "deadline (unix)",
+            }[k]}
+            value={(f as any)[k]}
+            onChange={e => handleSwapChange(k, e.target.value)}
+          />
+          {swapErrors[k] && <small className="text-red-500">{swapErrors[k]}</small>}
+        </div>
       ))}
       <button className="btn btn-primary w-full" onClick={swap}>
         swap
