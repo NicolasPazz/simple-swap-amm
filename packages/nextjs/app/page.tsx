@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { txToast } from "../components/TxToast";
 import { Address, formatUnits, parseUnits } from "viem";
 import { getAddress } from "viem";
 import { ethers } from "ethers";
@@ -10,7 +10,6 @@ import { useWriteContract } from "wagmi";
 import deployed from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth/useScaffoldWriteContract";
-import { useTransactor } from "~~/hooks/scaffold-eth";
 import scaffoldConfig from "~~/scaffold.config";
 
 const CHAIN_ID =
@@ -48,13 +47,7 @@ const TokenClaim = ({ name }: TokenProps) => {
       },
       {
         onBlockConfirmation: tx => {
-          toast.dismiss();
-          toast.success(
-            <>
-              <p>Minted ✅</p>
-              <p className="break-all text-xs">{tx.transactionHash}</p>
-            </>,
-          );
+          txToast("success", "Minted", tx.transactionHash);
         },
       },
     );
@@ -92,46 +85,47 @@ type ApproveTokensProps = {
 
 const useApproveTokens = (swapAddr: Address) => {
   const { writeContractAsync } = useWriteContract();
-  const writeTx = useTransactor();
 
   return async ({ tokenAContract, tokenBContract, amountA, amountB }: ApproveTokensProps) => {
-    await writeTx(() =>
-      writeContractAsync({
-        address: tokenAContract,
-        abi: [
-          {
-            type: "function",
-            name: "approve",
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "value", type: "uint256" },
-            ],
-            outputs: [{ type: "bool" }],
-          },
-        ],
-        functionName: "approve",
-        args: [swapAddr, parseUnits(amountA, 18)],
-      })
-    );
+    const txA = await writeContractAsync({
+      address: tokenAContract,
+      abi: [
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+          ],
+          outputs: [{ type: "bool" }],
+        },
+      ],
+      functionName: "approve",
+      args: [swapAddr, parseUnits(amountA, 18)],
+    });
+    txToast("loading", "Approving token A", txA?.hash);
+    await txA?.wait();
+    txToast("success", "Token A approved", txA?.hash);
 
-    await writeTx(() =>
-      writeContractAsync({
-        address: tokenBContract,
-        abi: [
-          {
-            type: "function",
-            name: "approve",
-            inputs: [
-              { name: "spender", type: "address" },
-              { name: "value", type: "uint256" },
-            ],
-            outputs: [{ type: "bool" }],
-          },
-        ],
-        functionName: "approve",
-        args: [swapAddr, parseUnits(amountB, 18)],
-      })
-    );
+    const txB = await writeContractAsync({
+      address: tokenBContract,
+      abi: [
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+          ],
+          outputs: [{ type: "bool" }],
+        },
+      ],
+      functionName: "approve",
+      args: [swapAddr, parseUnits(amountB, 18)],
+    });
+    txToast("loading", "Approving token B", txB?.hash);
+    await txB?.wait();
+    txToast("success", "Token B approved", txB?.hash);
   };
 };
 
@@ -289,7 +283,7 @@ const SwapAddLiquidity = () => {
 
   const add = async () => {
     if (!ethers.utils.isAddress(f.tokenA) || !ethers.utils.isAddress(f.tokenB)) {
-      toast.error("Invalid token address");
+      txToast("error", "Invalid token address");
       return;
     }
 
@@ -303,21 +297,24 @@ const SwapAddLiquidity = () => {
       amountB: f.amountBDesired,
     });
 
-    await write({
-      functionName: "addLiquidity",
-      args: [
-        tokenAAddress,
-        tokenBAddress,
-        parseUnits(f.amountADesired, 18),
-        parseUnits(f.amountBDesired, 18),
-        parseUnits(f.amountAMin, 18),
-        parseUnits(f.amountBMin, 18),
-        address as Address,
-        BigInt(f.deadline),
-      ],
-    });
-
-    toast.success(<>Liquidity added ✅</>);
+    await write(
+      {
+        functionName: "addLiquidity",
+        args: [
+          tokenAAddress,
+          tokenBAddress,
+          parseUnits(f.amountADesired, 18),
+          parseUnits(f.amountBDesired, 18),
+          parseUnits(f.amountAMin, 18),
+          parseUnits(f.amountBMin, 18),
+          address as Address,
+          BigInt(f.deadline),
+        ],
+      },
+      {
+        onBlockConfirmation: tx => txToast("success", "Liquidity added", tx.transactionHash),
+      },
+    );
   };
 
   return (
@@ -390,7 +387,7 @@ const SwapRemoveLiquidity = () => {
 
   const remove = () => {
     if (!ethers.utils.isAddress(f.tokenA) || !ethers.utils.isAddress(f.tokenB) || f.tokenA === f.tokenB) {
-      toast.error("Invalid token address");
+      txToast("error", "Invalid token address");
       return;
     }
     write(
@@ -408,13 +405,7 @@ const SwapRemoveLiquidity = () => {
       },
       {
         onBlockConfirmation: tx => {
-          toast.dismiss();
-          toast.success(
-            <>
-              <p>Liquidity removed ✅</p>
-              <p className="break-all text-xs">{tx.transactionHash}</p>
-            </>,
-          );
+          txToast("success", "Liquidity removed", tx.transactionHash);
         },
       },
     );
@@ -535,7 +526,7 @@ const SwapSwap = () => {
 
   const swap = async () => {
     if (!ethers.utils.isAddress(f.tokenIn) || !ethers.utils.isAddress(f.tokenOut)) {
-      toast.error("Invalid token address");
+      txToast("error", "Invalid token address");
       return;
     }
 
@@ -549,18 +540,21 @@ const SwapSwap = () => {
       amountB: "0",
     });
 
-    await write({
-      functionName: "swapExactTokensForTokens",
-      args: [
-        parseUnits(f.amountIn, 18),
-        parseUnits(f.amountOutMin, 18),
-        [tokenInAddress, tokenOutAddress],
-        address as Address,
-        BigInt(f.deadline),
-      ],
-    });
-
-    toast.success(<>Swapped ✅</>);
+    await write(
+      {
+        functionName: "swapExactTokensForTokens",
+        args: [
+          parseUnits(f.amountIn, 18),
+          parseUnits(f.amountOutMin, 18),
+          [tokenInAddress, tokenOutAddress],
+          address as Address,
+          BigInt(f.deadline),
+        ],
+      },
+      {
+        onBlockConfirmation: tx => txToast("success", "Swapped", tx.transactionHash),
+      },
+    );
   };
 
   return (

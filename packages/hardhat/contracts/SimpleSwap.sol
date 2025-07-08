@@ -268,13 +268,13 @@ contract SimpleSwap is ERC20, ISimpleSwap {
         amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
     }
 
-    /// @dev Helper: returns the smaller of two uints
-    function min(uint a, uint b) private pure returns (uint) {
+    /// @dev Returns the smaller of two uints
+    function min(uint a, uint b) internal pure returns (uint) {
         return a < b ? a : b;
     }
 
-    /// @dev Helper: integer square root (for initial LP minting)
-    function sqrt(uint y) private pure returns (uint z) {
+    /// @dev Integer square root used for initial LP minting
+    function sqrt(uint y) internal pure returns (uint z) {
         if (y > 3) {
             z = y;
             uint x = y / 2 + 1;
