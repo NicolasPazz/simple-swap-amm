@@ -10,6 +10,11 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadCo
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth/useScaffoldWriteContract";
 import scaffoldConfig from "~~/scaffold.config";
 
+/**
+ * Main application page. Provides utilities to mint test tokens, add/remove
+ * liquidity, check prices and perform swaps against the SimpleSwap contract.
+ */
+
 const CHAIN_ID =
   Number(process.env.NEXT_PUBLIC_CHAIN_ID) || scaffoldConfig.targetNetworks[0].id;
 const swapAddr = (deployed as Record<number, any>)[CHAIN_ID].SimpleSwap.address as Address;
@@ -86,9 +91,14 @@ type ApproveTokensProps = {
 
 const useApproveTokens = (swapAddr: Address) => {
   const { writeContractAsync } = useWriteContract();
-  const publicClient = usePublicClient();
+  const publicClient = usePublicClient({ chainId: CHAIN_ID });
 
   return async ({ tokenAContract, tokenBContract, amountA, amountB }: ApproveTokensProps) => {
+    if (!publicClient) {
+      txToast("error", "Public client unavailable");
+      return;
+    }
+
     const txHashA = await writeContractAsync({
       address: tokenAContract,
       abi: [
@@ -257,10 +267,8 @@ const SwapAddLiquidity = () => {
         msg = "Invalid address format";
       } else if (key === "tokenB" && value === form.tokenA) {
         msg = "Must be different from the other address";
-        setAddErrors(prev => ({ ...prev, tokenB: "Must be different from the other address" }));
       } else if (key === "tokenA" && value === form.tokenB) {
         msg = "Must be different from the other address";
-        setAddErrors(prev => ({ ...prev, tokenA: "Must be different from the other address" }));
       } else {
         if (key === "tokenB") setAddErrors(prev => ({ ...prev, tokenB: "" }));
         if (key === "tokenA") setAddErrors(prev => ({ ...prev, tokenA: "" }));
@@ -514,13 +522,11 @@ const SwapSwap = () => {
         msg = "Invalid address format";
       } else if (key === "tokenOut" && value === form.tokenIn) {
         msg = "Must be different from the other address";
-        setSwapErrors(prev => ({ ...prev, tokenIn: "Must be different from the other address" }));
       } else if (key === "tokenIn" && value === form.tokenOut) {
         msg = "Must be different from the other address";
-        setSwapErrors(prev => ({ ...prev, tokenOut: "Must be different from the other address" }));
       } else {
-        if (key === "tokenOut") setSwapErrors(prev => ({ ...prev, tokenIn: "" }));
-        if (key === "tokenIn") setSwapErrors(prev => ({ ...prev, tokenOut: "" }));
+        if (key === "tokenOut") setSwapErrors(prev => ({ ...prev, tokenOut: "" }));
+        if (key === "tokenIn") setSwapErrors(prev => ({ ...prev, tokenIn: "" }));
       }
     } else if (key === "amountIn" || key === "amountOutMin") {
       if (value && Number(value) <= 0) msg = "Must be greater than 0";

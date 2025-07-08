@@ -42,8 +42,14 @@ export const Footer = () => {
         </div>
       </div>
       <div className="w-full">
-        <ul className="menu menu-horizontal w-full">
-          <li className="w-full text-center text-sm">© {new Date().getFullYear()} Simple Swap</li>
+        <ul className="menu menu-horizontal w-full justify-center gap-2 text-sm">
+          <li>© {new Date().getFullYear()} Simple Swap</li>
+          <li>
+            Made by{' '}
+            <a href="https://github.com/NicolasPazz" target="_blank" rel="noreferrer" className="link">
+              Nicolas Paz
+            </a>
+          </li>
         </ul>
       </div>
     </div>

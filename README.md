@@ -161,3 +161,7 @@ simple-swap/
 ## 🧾 License
 
 MIT © 2025
+
+---
+
+Made by [Nicolas Paz](https://github.com/NicolasPazz)

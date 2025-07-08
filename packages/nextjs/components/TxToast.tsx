@@ -1,6 +1,11 @@
 "use client";
-import { toast, Toast } from "react-hot-toast";
 import React from "react";
+import { toast, Toast } from "react-hot-toast";
+
+/**
+ * Custom toast notifications used across the app.
+ * Provides a link to the transaction on Etherscan when a hash is supplied.
+ */
 
 export type ToastType = "success" | "error" | "loading";
 

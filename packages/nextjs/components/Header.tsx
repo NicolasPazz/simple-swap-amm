@@ -9,6 +9,11 @@ import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
+/**
+ * Application header with navigation and wallet controls.
+ * The debug contracts link is kept for development convenience.
+ */
+
 type HeaderMenuLink = {
   label: string;
   href: string;
@@ -91,9 +96,6 @@ export const Header = () => {
             <span className="text-xs">Swap instantly</span>
           </div>
         </Link>
-        <span className="hidden lg:block text-xs">
-          Made by <a href="https://github.com/NicolasPazz" target="_blank" rel="noreferrer" className="link">Nicolas Paz</a>
-        </span>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
           <HeaderMenuLinks />
         </ul>
