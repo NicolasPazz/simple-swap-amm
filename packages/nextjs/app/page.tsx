@@ -166,7 +166,7 @@ const SwapGetPrice = () => {
 
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
-      <h3 className="font-bold">getPrice</h3>
+      <h3 className="font-bold">Price</h3>
       <input
         className="input input-bordered w-full"
         placeholder="Token A address (0x...)"
@@ -214,7 +214,7 @@ const SwapGetLiquidity = () => {
 
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
-      <h3 className="font-bold">getLiquidity</h3>
+      <h3 className="font-bold">Liquidity</h3>
       <input
         className="input input-bordered w-full"
         placeholder="Token A address (0x...)"
@@ -286,7 +286,7 @@ const SwapAddLiquidity = () => {
 
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
-      <h3 className="font-bold">addLiquidity</h3>
+      <h3 className="font-bold">Add Liquidity</h3>
       {(["tokenA", "tokenB", "amountADesired", "amountBDesired", "amountAMin", "amountBMin", "deadline"] as const).map(k => (
         <input
           key={k}
@@ -356,7 +356,7 @@ const SwapRemoveLiquidity = () => {
 
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
-      <h3 className="font-bold">removeLiquidity</h3>
+      <h3 className="font-bold">Remove Liquidity</h3>
       {(["tokenA", "tokenB", "liquidity", "amountAMin", "amountBMin", "deadline"] as const).map(k => (
         <input
           key={k}
@@ -402,7 +402,7 @@ const SwapGetOut = () => {
 
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
-      <h3 className="font-bold">getAmountOut</h3>
+      <h3 className="font-bold">Amount Out</h3>
       {(["amountIn", "reserveIn", "reserveOut"] as const).map(k => (
         <input
           key={k}
@@ -469,7 +469,7 @@ const SwapSwap = () => {
 
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
-      <h3 className="font-bold">swapExactTokensForTokens</h3>
+      <h3 className="font-bold">Swap</h3>
       {(["amountIn", "amountOutMin", "tokenIn", "tokenOut", "deadline"] as const).map(k => (
         <input
           key={k}
