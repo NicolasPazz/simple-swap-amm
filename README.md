@@ -60,10 +60,8 @@ The web application is deployed on Vercel and interacts with the contracts on Se
 
 ## ✅ Tests and Coverage
 
-- The contract has **100% test coverage**
-- Tests are written using **Hardhat + Chai** and cover every branch of `SimpleSwap.sol`
-
-To run tests and check coverage:
+The smart contracts reach **100% coverage** across statements, branches, and lines.
+Tests use **Hardhat** and **Chai**. Run them with:
 
 ```bash
 cd packages/hardhat

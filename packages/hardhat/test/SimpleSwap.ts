@@ -180,6 +180,39 @@ describe("SimpleSwap", function () {
         swap.removeLiquidity(tokenA.target, tokenB.target, 1000, 0, 0, await owner.getAddress(), deadline),
       ).to.be.revertedWith("SimpleSwap: NOT_ENOUGH_USER_LIQUIDITY");
     });
+
+    it("should revert if min amounts not met", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) {
+        throw new Error("No block data available");
+      }
+      const deadline = block.timestamp + 1000;
+
+      await swap.addLiquidity(
+        tokenA.target,
+        tokenB.target,
+        ethers.parseEther("0.1"),
+        ethers.parseEther("0.2"),
+        0,
+        0,
+        await owner.getAddress(),
+        deadline,
+      );
+
+      const lp = await swap.balanceOf(await owner.getAddress());
+
+      await expect(
+        swap.removeLiquidity(
+          tokenA.target,
+          tokenB.target,
+          lp,
+          ethers.parseEther("0.11"),
+          0,
+          await owner.getAddress(),
+          deadline,
+        ),
+      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_OUTPUT_AMOUNT");
+    });
   });
 
   describe("swapExactTokensForTokens", () => {
@@ -213,6 +246,40 @@ describe("SimpleSwap", function () {
           await user.getAddress(),
           deadline,
         );
+    });
+
+    it("should revert if expected output too high", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) {
+        throw new Error("No block data available");
+      }
+      const deadline = block.timestamp + 1000;
+
+      await swap.addLiquidity(
+        tokenA.target,
+        tokenB.target,
+        ethers.parseEther("0.1"),
+        ethers.parseEther("0.2"),
+        0,
+        0,
+        await owner.getAddress(),
+        deadline,
+      );
+
+      await tokenA.transfer(await user.getAddress(), ethers.parseEther("0.01"));
+      await tokenA.connect(user).approve(swap.target, ethers.MaxUint256);
+
+      await expect(
+        swap
+          .connect(user)
+          .swapExactTokensForTokens(
+            ethers.parseEther("0.01"),
+            ethers.parseEther("0.02"),
+            [tokenA.target, tokenB.target],
+            await user.getAddress(),
+            deadline,
+          ),
+      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_OUTPUT_AMOUNT");
     });
 
     it("should revert with invalid path", async () => {
@@ -276,6 +343,7 @@ describe("SimpleSwap", function () {
       expect(await helper.exposeSqrt(0)).to.equal(0n);
       expect(await helper.exposeSqrt(1)).to.equal(1n);
       expect(await helper.exposeSqrt(4)).to.equal(2n);
+      expect(await helper.exposeSqrt(16)).to.equal(4n);
     });
 
     it("min returns smallest value", async () => {
@@ -283,6 +351,7 @@ describe("SimpleSwap", function () {
       const helper = await Wrapper.deploy();
       expect(await helper.exposeMin(1, 2)).to.equal(1n);
       expect(await helper.exposeMin(5, 2)).to.equal(2n);
+      expect(await helper.exposeMin(3, 3)).to.equal(3n);
     });
 
     it("getAmountOutInternal matches external call", async () => {
@@ -291,6 +360,17 @@ describe("SimpleSwap", function () {
       const inner = await helper.exposeGetAmountOutInternal(1000, 1000, 2000);
       const ext = await swap.getAmountOut(1000, 1000, 2000);
       expect(inner).to.equal(ext);
+    });
+
+    it("getAmountOutInternal reverts with bad params", async () => {
+      const Wrapper = await ethers.getContractFactory("SimpleSwapWrapper");
+      const helper = await Wrapper.deploy();
+      await expect(
+        helper.exposeGetAmountOutInternal(0, 1, 1),
+      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_INPUT_AMOUNT");
+      await expect(
+        helper.exposeGetAmountOutInternal(1, 0, 1),
+      ).to.be.revertedWith("SimpleSwap: INSUFFICIENT_LIQUIDITY");
     });
   });
 });

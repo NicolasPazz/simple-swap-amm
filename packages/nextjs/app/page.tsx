@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { txToast } from "../components/TxToast";
 import { Address, formatUnits, parseUnits, isAddress, getAddress } from "viem";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { useWriteContract } from "wagmi";
 import deployed from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
@@ -14,7 +14,7 @@ const CHAIN_ID =
   Number(process.env.NEXT_PUBLIC_CHAIN_ID) || scaffoldConfig.targetNetworks[0].id;
 const swapAddr = (deployed as Record<number, any>)[CHAIN_ID].SimpleSwap.address as Address;
 const contractName = "SimpleSwap";
-const defaultDeadline = (Math.floor(Date.now() / 1000) + 60 * 60).toString();
+const getDefaultDeadline = () => (Math.floor(Date.now() / 1000) + 60 * 60).toString();
 
 /* ------------------------- TOKENS ------------------------- */
 type TokenProps = { name: "BOOKE" | "MIAMI" };
@@ -34,7 +34,10 @@ const TokenClaim = ({ name }: TokenProps) => {
   });
 
   const claim = async () => {
-    if (!amount) return;
+    if (!amount || Number(amount) <= 0) {
+      txToast("error", "Amount must be greater than 0");
+      return;
+    }
 
     const raw = BigInt(amount);
 
@@ -83,6 +86,7 @@ type ApproveTokensProps = {
 
 const useApproveTokens = (swapAddr: Address) => {
   const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
 
   return async ({ tokenAContract, tokenBContract, amountA, amountB }: ApproveTokensProps) => {
     const txHashA = await writeContractAsync({
@@ -101,25 +105,28 @@ const useApproveTokens = (swapAddr: Address) => {
       functionName: "approve",
       args: [swapAddr, parseUnits(amountA, 18)],
     });
+    await publicClient.waitForTransactionReceipt({ hash: txHashA });
     txToast("success", "Token A approved", txHashA);
-
-    const txHashB = await writeContractAsync({
-      address: tokenBContract,
-      abi: [
-        {
-          type: "function",
-          name: "approve",
-          inputs: [
-            { name: "spender", type: "address" },
-            { name: "value", type: "uint256" },
-          ],
-          outputs: [{ type: "bool" }],
-        },
-      ],
-      functionName: "approve",
-      args: [swapAddr, parseUnits(amountB, 18)],
-    });
-    txToast("success", "Token B approved", txHashB);
+    if (parseFloat(amountB) > 0) {
+      const txHashB = await writeContractAsync({
+        address: tokenBContract,
+        abi: [
+          {
+            type: "function",
+            name: "approve",
+            inputs: [
+              { name: "spender", type: "address" },
+              { name: "value", type: "uint256" },
+            ],
+            outputs: [{ type: "bool" }],
+          },
+        ],
+        functionName: "approve",
+        args: [swapAddr, parseUnits(amountB, 18)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: txHashB });
+      txToast("success", "Token B approved", txHashB);
+    }
   };
 };
 
@@ -234,7 +241,7 @@ const SwapAddLiquidity = () => {
     amountBDesired: "",
     amountAMin: "",
     amountBMin: "",
-    deadline: defaultDeadline,
+    deadline: getDefaultDeadline(),
   });
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
 
@@ -242,6 +249,7 @@ const SwapAddLiquidity = () => {
   const write = useScaffoldWriteContract(contractName).writeContractAsync;
 
   const handleAddChange = (key: string, value: string) => {
+    if (key.includes("amount") && value) value = value.replace(/,/g, ".");
     setForm(prev => ({ ...prev, [key]: value }));
     let msg = "";
     if (key === "tokenA" || key === "tokenB") {
@@ -271,6 +279,9 @@ const SwapAddLiquidity = () => {
       else if (form.amountBDesired && val > Number(form.amountBDesired)) {
         msg = "Must be less than or equal to amountBDesired";
       }
+    } else if (key === "deadline") {
+      if (Number(value) < Math.floor(Date.now() / 1000) + 30)
+        msg = "Must be at least 30s from now";
     }
     setAddErrors(prev => ({ ...prev, [key]: msg }));
   };
@@ -351,12 +362,13 @@ const SwapRemoveLiquidity = () => {
     liquidity: "",
     amountAMin: "",
     amountBMin: "",
-    deadline: defaultDeadline,
+    deadline: getDefaultDeadline(),
   });
   const [removeErrors, setRemoveErrors] = useState<Record<string, string>>({});
   const write = useToastWrite(contractName);
 
   const handleRemoveChange = (key: string, value: string) => {
+    if (key.includes("amount") && value) value = value.replace(/,/g, ".");
     setForm(prev => ({ ...prev, [key]: value }));
     let msg = "";
     if (key === "tokenA" || key === "tokenB") {
@@ -375,6 +387,9 @@ const SwapRemoveLiquidity = () => {
       if (key === "amountBMin" && form.liquidity && Number(value) > Number(form.liquidity)) {
         msg = `Valid range: minimum 0, maximum ${form.liquidity}`;
       }
+    } else if (key === "deadline") {
+      if (Number(value) < Math.floor(Date.now() / 1000) + 30)
+        msg = "Must be at least 30s from now";
     }
     setRemoveErrors(prev => ({ ...prev, [key]: msg }));
   };
@@ -484,13 +499,14 @@ const SwapSwap = () => {
     amountOutMin: "",
     tokenIn: "",
     tokenOut: "",
-    deadline: defaultDeadline,
+    deadline: getDefaultDeadline(),
   });
   const [swapErrors, setSwapErrors] = useState<Record<string, string>>({});
   const write = useScaffoldWriteContract(contractName).writeContractAsync;
   const approveTokens = useApproveTokens(swapAddr);
 
   const handleSwapChange = (key: string, value: string) => {
+    if (key.includes("amount") && value) value = value.replace(/,/g, ".");
     setForm(prev => ({ ...prev, [key]: value }));
     let msg = "";
     if (key === "tokenIn" || key === "tokenOut") {
@@ -514,6 +530,9 @@ const SwapSwap = () => {
           msg = `Valid range: minimum ${suggested}`;
         }
       }
+    } else if (key === "deadline") {
+      if (Number(value) < Math.floor(Date.now() / 1000) + 30)
+        msg = "Must be at least 30s from now";
     }
     setSwapErrors(prev => ({ ...prev, [key]: msg }));
   };
