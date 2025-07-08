@@ -204,6 +204,8 @@ contract SimpleSwap is ERC20, ISimpleSwap {
         require(path.length == 2, "SimpleSwap: INVALID_PATH");
         address tokenIn = path[0];
         address tokenOut = path[1];
+        // Disallow zero address tokens to avoid accidental burns
+        require(tokenIn != address(0) && tokenOut != address(0), "SimpleSwap: ZERO_ADDRESS");
 
         // Retrieve reserves
         uint reserveIn = reservesA[tokenIn][tokenOut];

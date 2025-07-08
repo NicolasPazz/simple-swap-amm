@@ -60,12 +60,12 @@ The web application is deployed on Vercel and interacts with the contracts on Se
 
 ## ✅ Tests and Coverage
 
-The smart contracts reach **100% coverage** across statements, branches, and lines.
+The smart contracts reach **100% coverage** across statements, branches, functions, and lines.
 Tests use **Hardhat** and **Chai**. Run them with:
 
 ```bash
 cd packages/hardhat
-yarn coverage
+npx hardhat coverage
 ```
 
 To start the frontend locally:
