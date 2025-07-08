@@ -69,7 +69,7 @@ const TokenClaim = ({ name }: TokenProps) => {
         type="number"
         min="0"
         step="any"
-        placeholder="amount (tokens)"
+        placeholder="Amount to mint"
         value={amount}
         onChange={e => setAmount(e.target.value)}
       />
@@ -161,7 +161,7 @@ const SwapGetPrice = () => {
   if (isError && error?.message?.includes("NO_LIQUIDITY")) {
     body = <p className="italic text-sm text-red-500">No liquidity for this pair</p>;
   } else if (data !== undefined) {
-    body = <p>price: {formatUnits(data, 18)}</p>;
+    body = <p className="break-all">price: {formatUnits(data, 18)}</p>;
   }
 
   return (
@@ -169,13 +169,13 @@ const SwapGetPrice = () => {
       <h3 className="font-bold">getPrice</h3>
       <input
         className="input input-bordered w-full"
-        placeholder="tokenA address"
+        placeholder="Token A address (0x...)"
         value={tokenA}
         onChange={e => setA(e.target.value)}
       />
       <input
         className="input input-bordered w-full"
-        placeholder="tokenB address"
+        placeholder="Token B address (0x...)"
         value={tokenB}
         onChange={e => setB(e.target.value)}
       />
@@ -209,7 +209,7 @@ const SwapGetLiquidity = () => {
   if (isError) {
     body = <p className="italic text-sm text-red-500">No liquidity for this pair</p>;
   } else if (data !== undefined) {
-    body = <p>liquidity: {formatUnits(data, 18)} LP</p>;
+    body = <p className="break-all">liquidity: {formatUnits(data, 18)} LP</p>;
   }
 
   return (
@@ -217,13 +217,13 @@ const SwapGetLiquidity = () => {
       <h3 className="font-bold">getLiquidity</h3>
       <input
         className="input input-bordered w-full"
-        placeholder="tokenA address"
+        placeholder="Token A address (0x...)"
         value={tokenA}
         onChange={e => setA(e.target.value)}
       />
       <input
         className="input input-bordered w-full"
-        placeholder="tokenB address"
+        placeholder="Token B address (0x...)"
         value={tokenB}
         onChange={e => setB(e.target.value)}
       />
@@ -237,6 +237,7 @@ const SwapGetLiquidity = () => {
  */
 const SwapAddLiquidity = () => {
   const { address } = useAccount();
+  const defaultDeadline = Math.floor(Date.now() / 1000 + 60 * 60).toString();
   const [f, sF] = useState({
     tokenA: "",
     tokenB: "",
@@ -244,7 +245,7 @@ const SwapAddLiquidity = () => {
     amountBDesired: "",
     amountAMin: "",
     amountBMin: "",
-    deadline: "",
+    deadline: defaultDeadline,
   });
 
   const approveTokens = useApproveTokens(swapAddr);
@@ -286,17 +287,23 @@ const SwapAddLiquidity = () => {
   return (
     <div className="card bg-base-100 border border-secondary/20 p-4 space-y-2">
       <h3 className="font-bold">addLiquidity</h3>
-      {(["tokenA", "tokenB", "amountADesired", "amountBDesired", "amountAMin", "amountBMin", "deadline"] as const).map(
-        k => (
-          <input
-            key={k}
-            className="input input-bordered w-full"
-            placeholder={k}
-            value={(f as any)[k]}
-            onChange={e => sF({ ...f, [k]: e.target.value })}
-          />
-        ),
-      )}
+      {(["tokenA", "tokenB", "amountADesired", "amountBDesired", "amountAMin", "amountBMin", "deadline"] as const).map(k => (
+        <input
+          key={k}
+          className="input input-bordered w-full"
+          placeholder={{
+            tokenA: "Token A address",
+            tokenB: "Token B address",
+            amountADesired: "Desired amount A",
+            amountBDesired: "Desired amount B",
+            amountAMin: "Min amount A",
+            amountBMin: "Min amount B",
+            deadline: "Deadline (unix)",
+          }[k]}
+          value={(f as any)[k]}
+          onChange={e => sF({ ...f, [k]: e.target.value })}
+        />
+      ))}
       <button className="btn btn-primary w-full" onClick={add}>
         add
       </button>
@@ -309,13 +316,14 @@ const SwapAddLiquidity = () => {
  */
 const SwapRemoveLiquidity = () => {
   const { address } = useAccount();
+  const defaultDeadlineRemove = Math.floor(Date.now() / 1000 + 60 * 60).toString();
   const [f, sF] = useState({
     tokenA: "",
     tokenB: "",
     liquidity: "",
     amountAMin: "",
     amountBMin: "",
-    deadline: "",
+    deadline: defaultDeadlineRemove,
   });
   const write = useToastWrite(contractName);
 
@@ -353,7 +361,14 @@ const SwapRemoveLiquidity = () => {
         <input
           key={k}
           className="input input-bordered w-full"
-          placeholder={k}
+          placeholder={{
+            tokenA: "Token A address",
+            tokenB: "Token B address",
+            liquidity: "LP tokens",
+            amountAMin: "Min amount A",
+            amountBMin: "Min amount B",
+            deadline: "Deadline (unix)",
+          }[k]}
           value={(f as any)[k]}
           onChange={e => sF({ ...f, [k]: e.target.value })}
         />
@@ -392,12 +407,16 @@ const SwapGetOut = () => {
         <input
           key={k}
           className="input input-bordered w-full"
-          placeholder={k}
+          placeholder={{
+            amountIn: "Amount in",
+            reserveIn: "Reserve in",
+            reserveOut: "Reserve out",
+          }[k]}
           value={(inp as any)[k]}
           onChange={e => setInp({ ...inp, [k]: e.target.value })}
         />
       ))}
-      {data !== undefined && <p>out: {formatUnits(data, 18)}</p>}
+      {data !== undefined && <p className="break-all">out: {formatUnits(data, 18)}</p>}
     </div>
   );
 };
@@ -407,12 +426,13 @@ const SwapGetOut = () => {
  */
 const SwapSwap = () => {
   const { address } = useAccount();
+  const defaultDeadlineSwap = Math.floor(Date.now() / 1000 + 60 * 60).toString();
   const [f, sF] = useState({
     amountIn: "",
     amountOutMin: "",
     tokenIn: "",
     tokenOut: "",
-    deadline: "",
+    deadline: defaultDeadlineSwap,
   });
   const write = useScaffoldWriteContract(contractName).writeContractAsync;
   const approveTokens = useApproveTokens(swapAddr);
@@ -454,7 +474,13 @@ const SwapSwap = () => {
         <input
           key={k}
           className="input input-bordered w-full"
-          placeholder={k}
+          placeholder={{
+            amountIn: "Amount in",
+            amountOutMin: "Min amount out",
+            tokenIn: "Token in address",
+            tokenOut: "Token out address",
+            deadline: "Deadline (unix)",
+          }[k]}
           value={(f as any)[k]}
           onChange={e => sF({ ...f, [k]: e.target.value })}
         />
@@ -479,7 +505,7 @@ const LPBalance = () => {
   return (
     <div className="card bg-gradient-to-br from-secondary/40 to-primary/40 p-4 text-center">
       <h3 className="font-bold">Your LP Tokens</h3>
-      <p className="text-lg">{data ? formatUnits(data, 18) : "0"} LP</p>
+      <p className="text-lg break-all">{data ? formatUnits(data, 18) : "0"} LP</p>
     </div>
   );
 };
@@ -495,7 +521,7 @@ export default function Page() {
         <TokenClaim name="MIAMI" />
       </div>
       <LPBalance />
-      <div className="grid gap-6 w-full max-w-7xl md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 w-full max-w-7xl">
         <SwapGetPrice />
         <SwapGetLiquidity />
         <SwapAddLiquidity />
