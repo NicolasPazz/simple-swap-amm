@@ -20,6 +20,7 @@ const CHAIN_ID =
   Number(process.env.NEXT_PUBLIC_CHAIN_ID) || scaffoldConfig.targetNetworks[0].id;
 const swapAddr = (deployed as Record<number, any>)[CHAIN_ID].SimpleSwap.address as Address;
 const contractName = "SimpleSwap";
+// Default deadline used for forms: current time + 1 hour
 const getDefaultDeadline = () => (Math.floor(Date.now() / 1000) + 60 * 60).toString();
 
 /* ------------------------- TOKENS ------------------------- */

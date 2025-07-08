@@ -124,6 +124,39 @@ describe("SimpleSwap", function () {
       );
     });
 
+    it("should calculate optimal A when B is below ratio", async () => {
+      const block = await ethers.provider.getBlock("latest");
+      if (!block) throw new Error("No block data available");
+      const deadline = block.timestamp + 1000;
+
+      await swap.addLiquidity(
+        tokenA.target,
+        tokenB.target,
+        ethers.parseEther("0.1"),
+        ethers.parseEther("0.2"),
+        0,
+        0,
+        await owner.getAddress(),
+        deadline,
+      );
+
+      const before = await tokenA.balanceOf(await owner.getAddress());
+
+      await swap.addLiquidity(
+        tokenA.target,
+        tokenB.target,
+        ethers.parseEther("0.05"),
+        ethers.parseEther("0.08"),
+        ethers.parseEther("0.039"),
+        ethers.parseEther("0.079"),
+        await owner.getAddress(),
+        deadline,
+      );
+
+      const after = await tokenA.balanceOf(await owner.getAddress());
+      expect(before - after).to.equal(ethers.parseEther("0.04"));
+    });
+
     it("should revert with insufficient A or B", async () => {
       const block = await ethers.provider.getBlock("latest");
       if (!block) {
@@ -421,6 +454,8 @@ describe("SimpleSwap", function () {
       await badB.mint(await owner.getAddress(), ethers.parseEther("1"));
       await badA.approve(swap.target, ethers.MaxUint256);
       await badB.approve(swap.target, ethers.MaxUint256);
+      await badA.setFailTransferFrom(true);
+      await badB.setFailTransferFrom(true);
       const block = await ethers.provider.getBlock("latest");
       if (!block) throw new Error("No block");
       const deadline = block.timestamp + 1000;
@@ -458,6 +493,7 @@ describe("SimpleSwap", function () {
         await owner.getAddress(),
         deadline,
       );
+      await badOut.setFailTransfer(true);
       await expect(
         swap.swapExactTokensForTokens(
           ethers.parseEther("0.01"),

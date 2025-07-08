@@ -60,7 +60,13 @@ The web application is deployed on Vercel and interacts with the contracts on Se
 
 ## ✅ Tests and Coverage
 
-The smart contracts reach **100% coverage** across statements, branches, functions, and lines.
+The smart contracts reach **100% coverage** across statements, branches, functions, and lines. Running `npx hardhat coverage` from `packages/hardhat` prints a summary like:
+
+```
+File              | % Stmts | % Branch | % Funcs | % Lines |
+------------------|--------|---------|--------|--------|
+SimpleSwap.sol    | 100    | 100     | 100    | 100    |
+```
 Tests use **Hardhat** and **Chai**. Run them with:
 
 ```bash
