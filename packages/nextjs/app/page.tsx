@@ -9,6 +9,7 @@ import { useWriteContract } from "wagmi";
 import deployed from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth/useScaffoldWriteContract";
+import { useTransactor } from "~~/hooks/scaffold-eth";
 import scaffoldConfig from "~~/scaffold.config";
 
 const CHAIN_ID =
@@ -89,41 +90,46 @@ type ApproveTokensProps = {
 
 const useApproveTokens = (swapAddr: Address) => {
   const { writeContractAsync } = useWriteContract();
+  const writeTx = useTransactor();
 
   return async ({ tokenAContract, tokenBContract, amountA, amountB }: ApproveTokensProps) => {
-    await writeContractAsync({
-      address: tokenAContract,
-      abi: [
-        {
-          type: "function",
-          name: "approve",
-          inputs: [
-            { name: "spender", type: "address" },
-            { name: "value", type: "uint256" },
-          ],
-          outputs: [{ type: "bool" }],
-        },
-      ],
-      functionName: "approve",
-      args: [swapAddr, parseUnits(amountA, 18)],
-    });
+    await writeTx(() =>
+      writeContractAsync({
+        address: tokenAContract,
+        abi: [
+          {
+            type: "function",
+            name: "approve",
+            inputs: [
+              { name: "spender", type: "address" },
+              { name: "value", type: "uint256" },
+            ],
+            outputs: [{ type: "bool" }],
+          },
+        ],
+        functionName: "approve",
+        args: [swapAddr, parseUnits(amountA, 18)],
+      })
+    );
 
-    await writeContractAsync({
-      address: tokenBContract,
-      abi: [
-        {
-          type: "function",
-          name: "approve",
-          inputs: [
-            { name: "spender", type: "address" },
-            { name: "value", type: "uint256" },
-          ],
-          outputs: [{ type: "bool" }],
-        },
-      ],
-      functionName: "approve",
-      args: [swapAddr, parseUnits(amountB, 18)],
-    });
+    await writeTx(() =>
+      writeContractAsync({
+        address: tokenBContract,
+        abi: [
+          {
+            type: "function",
+            name: "approve",
+            inputs: [
+              { name: "spender", type: "address" },
+              { name: "value", type: "uint256" },
+            ],
+            outputs: [{ type: "bool" }],
+          },
+        ],
+        functionName: "approve",
+        args: [swapAddr, parseUnits(amountB, 18)],
+      })
+    );
   };
 };
 
