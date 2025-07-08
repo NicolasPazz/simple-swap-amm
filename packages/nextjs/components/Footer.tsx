@@ -43,7 +43,7 @@ export const Footer = () => {
       </div>
       <div className="w-full">
         <ul className="menu menu-horizontal w-full">
-          <li className="w-full text-center text-sm">© 2025 Simple Swap</li>
+          <li className="w-full text-center text-sm">© {new Date().getFullYear()} Simple Swap</li>
         </ul>
       </div>
     </div>

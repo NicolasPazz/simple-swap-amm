@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { txToast } from "../components/TxToast";
-import { Address, formatUnits, parseUnits } from "viem";
-import { getAddress } from "viem";
-import { ethers } from "ethers";
+import { Address, formatUnits, parseUnits, isAddress, getAddress } from "viem";
 import { useAccount } from "wagmi";
 import { useWriteContract } from "wagmi";
 import deployed from "~~/contracts/deployedContracts";
@@ -16,7 +14,7 @@ const CHAIN_ID =
   Number(process.env.NEXT_PUBLIC_CHAIN_ID) || scaffoldConfig.targetNetworks[0].id;
 const swapAddr = (deployed as Record<number, any>)[CHAIN_ID].SimpleSwap.address as Address;
 const contractName = "SimpleSwap";
-const defaultDeadline = Math.floor(Date.now() / 1000 + 60 * 60).toString();
+const defaultDeadline = (Math.floor(Date.now() / 1000) + 60 * 60).toString();
 
 /* ------------------------- TOKENS ------------------------- */
 type TokenProps = { name: "BOOKE" | "MIAMI" };
@@ -87,7 +85,7 @@ const useApproveTokens = (swapAddr: Address) => {
   const { writeContractAsync } = useWriteContract();
 
   return async ({ tokenAContract, tokenBContract, amountA, amountB }: ApproveTokensProps) => {
-    const txA = await writeContractAsync({
+    const txHashA = await writeContractAsync({
       address: tokenAContract,
       abi: [
         {
@@ -103,11 +101,9 @@ const useApproveTokens = (swapAddr: Address) => {
       functionName: "approve",
       args: [swapAddr, parseUnits(amountA, 18)],
     });
-    txToast("loading", "Approving token A", txA?.hash);
-    await txA?.wait();
-    txToast("success", "Token A approved", txA?.hash);
+    txToast("success", "Token A approved", txHashA);
 
-    const txB = await writeContractAsync({
+    const txHashB = await writeContractAsync({
       address: tokenBContract,
       abi: [
         {
@@ -123,9 +119,7 @@ const useApproveTokens = (swapAddr: Address) => {
       functionName: "approve",
       args: [swapAddr, parseUnits(amountB, 18)],
     });
-    txToast("loading", "Approving token B", txB?.hash);
-    await txB?.wait();
-    txToast("success", "Token B approved", txB?.hash);
+    txToast("success", "Token B approved", txHashB);
   };
 };
 
@@ -233,7 +227,7 @@ const SwapGetLiquidity = () => {
  */
 const SwapAddLiquidity = () => {
   const { address } = useAccount();
-  const [f, sF] = useState({
+  const [form, setForm] = useState({
     tokenA: "",
     tokenB: "",
     amountADesired: "",
@@ -248,53 +242,53 @@ const SwapAddLiquidity = () => {
   const write = useScaffoldWriteContract(contractName).writeContractAsync;
 
   const handleAddChange = (key: string, value: string) => {
-    sF(prev => ({ ...prev, [key]: value }));
+    setForm(prev => ({ ...prev, [key]: value }));
     let msg = "";
     if (key === "tokenA" || key === "tokenB") {
-      if (value && !ethers.utils.isAddress(value)) {
-        msg = "Formato de dirección inválido";
-      } else if (key === "tokenB" && value === f.tokenA) {
-        msg = "Debe ser distinto de la otra dirección";
-        setAddErrors(prev => ({ ...prev, tokenA: "Debe ser distinto de la otra dirección" }));
-      } else if (key === "tokenA" && value === f.tokenB) {
-        msg = "Debe ser distinto de la otra dirección";
-        setAddErrors(prev => ({ ...prev, tokenB: "Debe ser distinto de la otra dirección" }));
+      if (value && !isAddress(value)) {
+        msg = "Invalid address format";
+      } else if (key === "tokenB" && value === form.tokenA) {
+        msg = "Must be different from the other address";
+        setAddErrors(prev => ({ ...prev, tokenB: "Must be different from the other address" }));
+      } else if (key === "tokenA" && value === form.tokenB) {
+        msg = "Must be different from the other address";
+        setAddErrors(prev => ({ ...prev, tokenA: "Must be different from the other address" }));
       } else {
-        if (key === "tokenB") setAddErrors(prev => ({ ...prev, tokenA: "" }));
-        if (key === "tokenA") setAddErrors(prev => ({ ...prev, tokenB: "" }));
+        if (key === "tokenB") setAddErrors(prev => ({ ...prev, tokenB: "" }));
+        if (key === "tokenA") setAddErrors(prev => ({ ...prev, tokenA: "" }));
       }
     } else if (key === "amountADesired" || key === "amountBDesired") {
-      if (value && Number(value) <= 0) msg = "Debe ser mayor a 0";
+      if (value && Number(value) <= 0) msg = "Must be greater than 0";
     } else if (key === "amountAMin") {
       const val = Number(value);
-      if (val <= 0) msg = "Debe ser mayor a 0";
-      else if (f.amountADesired && val > Number(f.amountADesired)) {
-        msg = "Debe ser menor o igual a amountADesired";
+      if (val <= 0) msg = "Must be greater than 0";
+      else if (form.amountADesired && val > Number(form.amountADesired)) {
+        msg = "Must be less than or equal to amountADesired";
       }
     } else if (key === "amountBMin") {
       const val = Number(value);
-      if (val <= 0) msg = "Debe ser mayor a 0";
-      else if (f.amountBDesired && val > Number(f.amountBDesired)) {
-        msg = "Debe ser menor o igual a amountBDesired";
+      if (val <= 0) msg = "Must be greater than 0";
+      else if (form.amountBDesired && val > Number(form.amountBDesired)) {
+        msg = "Must be less than or equal to amountBDesired";
       }
     }
     setAddErrors(prev => ({ ...prev, [key]: msg }));
   };
 
   const add = async () => {
-    if (!ethers.utils.isAddress(f.tokenA) || !ethers.utils.isAddress(f.tokenB)) {
+    if (!isAddress(form.tokenA) || !isAddress(form.tokenB)) {
       txToast("error", "Invalid token address");
       return;
     }
 
-    const tokenAAddress = getAddress(f.tokenA);
-    const tokenBAddress = getAddress(f.tokenB);
+    const tokenAAddress = getAddress(form.tokenA);
+    const tokenBAddress = getAddress(form.tokenB);
 
     await approveTokens({
       tokenAContract: tokenAAddress,
       tokenBContract: tokenBAddress,
-      amountA: f.amountADesired,
-      amountB: f.amountBDesired,
+      amountA: form.amountADesired,
+      amountB: form.amountBDesired,
     });
 
     await write(
@@ -303,12 +297,12 @@ const SwapAddLiquidity = () => {
         args: [
           tokenAAddress,
           tokenBAddress,
-          parseUnits(f.amountADesired, 18),
-          parseUnits(f.amountBDesired, 18),
-          parseUnits(f.amountAMin, 18),
-          parseUnits(f.amountBMin, 18),
+          parseUnits(form.amountADesired, 18),
+          parseUnits(form.amountBDesired, 18),
+          parseUnits(form.amountAMin, 18),
+          parseUnits(form.amountBMin, 18),
           address as Address,
-          BigInt(f.deadline),
+          BigInt(form.deadline),
         ],
       },
       {
@@ -333,7 +327,7 @@ const SwapAddLiquidity = () => {
               amountBMin: "min amount B (slippage)",
               deadline: "deadline (unix)",
             }[k]}
-            value={(f as any)[k]}
+            value={(form as any)[k]}
             onChange={e => handleAddChange(k, e.target.value)}
           />
           {addErrors[k] && <small className="text-red-500">{addErrors[k]}</small>}
@@ -351,7 +345,7 @@ const SwapAddLiquidity = () => {
  */
 const SwapRemoveLiquidity = () => {
   const { address } = useAccount();
-  const [f, sF] = useState({
+  const [form, setForm] = useState({
     tokenA: "",
     tokenB: "",
     liquidity: "",
@@ -363,30 +357,30 @@ const SwapRemoveLiquidity = () => {
   const write = useToastWrite(contractName);
 
   const handleRemoveChange = (key: string, value: string) => {
-    sF(prev => ({ ...prev, [key]: value }));
+    setForm(prev => ({ ...prev, [key]: value }));
     let msg = "";
     if (key === "tokenA" || key === "tokenB") {
-      if (value && !ethers.utils.isAddress(value)) {
-        msg = "Formato de dirección inválido";
-      } else if (key === "tokenB" && value === f.tokenA) {
-        msg = "Debe ser distinto de la otra dirección";
-      } else if (key === "tokenA" && value === f.tokenB) {
-        msg = "Debe ser distinto de la otra dirección";
+      if (value && !isAddress(value)) {
+        msg = "Invalid address format";
+      } else if (key === "tokenB" && value === form.tokenA) {
+        msg = "Must be different from the other address";
+      } else if (key === "tokenA" && value === form.tokenB) {
+        msg = "Must be different from the other address";
       }
     } else if (key === "liquidity" || key === "amountAMin" || key === "amountBMin") {
-      if (value && Number(value) <= 0) msg = "Debe ser mayor a 0";
-      if (key === "amountAMin" && f.liquidity && Number(value) > Number(f.liquidity)) {
-        msg = `Rango válido: mínimo 0, máximo ${f.liquidity}`;
+      if (value && Number(value) <= 0) msg = "Must be greater than 0";
+      if (key === "amountAMin" && form.liquidity && Number(value) > Number(form.liquidity)) {
+        msg = `Valid range: minimum 0, maximum ${form.liquidity}`;
       }
-      if (key === "amountBMin" && f.liquidity && Number(value) > Number(f.liquidity)) {
-        msg = `Rango válido: mínimo 0, máximo ${f.liquidity}`;
+      if (key === "amountBMin" && form.liquidity && Number(value) > Number(form.liquidity)) {
+        msg = `Valid range: minimum 0, maximum ${form.liquidity}`;
       }
     }
     setRemoveErrors(prev => ({ ...prev, [key]: msg }));
   };
 
   const remove = () => {
-    if (!ethers.utils.isAddress(f.tokenA) || !ethers.utils.isAddress(f.tokenB) || f.tokenA === f.tokenB) {
+    if (!isAddress(form.tokenA) || !isAddress(form.tokenB) || form.tokenA === form.tokenB) {
       txToast("error", "Invalid token address");
       return;
     }
@@ -394,13 +388,13 @@ const SwapRemoveLiquidity = () => {
       {
         functionName: "removeLiquidity",
         args: [
-          f.tokenA as Address,
-          f.tokenB as Address,
-          parseUnits(f.liquidity, 18),
-          parseUnits(f.amountAMin, 18),
-          parseUnits(f.amountBMin, 18),
+          form.tokenA as Address,
+          form.tokenB as Address,
+          parseUnits(form.liquidity, 18),
+          parseUnits(form.amountAMin, 18),
+          parseUnits(form.amountBMin, 18),
           address as Address,
-          BigInt(f.deadline),
+          BigInt(form.deadline),
         ],
       },
       {
@@ -426,7 +420,7 @@ const SwapRemoveLiquidity = () => {
               amountBMin: "min amount B (slippage)",
               deadline: "deadline (unix)",
             }[k]}
-            value={(f as any)[k]}
+            value={(form as any)[k]}
             onChange={e => handleRemoveChange(k, e.target.value)}
           />
           {removeErrors[k] && <small className="text-red-500">{removeErrors[k]}</small>}
@@ -485,7 +479,7 @@ const SwapGetOut = () => {
  */
 const SwapSwap = () => {
   const { address } = useAccount();
-  const [f, sF] = useState({
+  const [form, setForm] = useState({
     amountIn: "",
     amountOutMin: "",
     tokenIn: "",
@@ -497,27 +491,27 @@ const SwapSwap = () => {
   const approveTokens = useApproveTokens(swapAddr);
 
   const handleSwapChange = (key: string, value: string) => {
-    sF(prev => ({ ...prev, [key]: value }));
+    setForm(prev => ({ ...prev, [key]: value }));
     let msg = "";
     if (key === "tokenIn" || key === "tokenOut") {
-      if (value && !ethers.utils.isAddress(value)) {
-        msg = "Formato de dirección inválido";
-      } else if (key === "tokenOut" && value === f.tokenIn) {
-        msg = "Debe ser distinto de la otra dirección";
-        setSwapErrors(prev => ({ ...prev, tokenIn: "Debe ser distinto de la otra dirección" }));
-      } else if (key === "tokenIn" && value === f.tokenOut) {
-        msg = "Debe ser distinto de la otra dirección";
-        setSwapErrors(prev => ({ ...prev, tokenOut: "Debe ser distinto de la otra dirección" }));
+      if (value && !isAddress(value)) {
+        msg = "Invalid address format";
+      } else if (key === "tokenOut" && value === form.tokenIn) {
+        msg = "Must be different from the other address";
+        setSwapErrors(prev => ({ ...prev, tokenIn: "Must be different from the other address" }));
+      } else if (key === "tokenIn" && value === form.tokenOut) {
+        msg = "Must be different from the other address";
+        setSwapErrors(prev => ({ ...prev, tokenOut: "Must be different from the other address" }));
       } else {
         if (key === "tokenOut") setSwapErrors(prev => ({ ...prev, tokenIn: "" }));
         if (key === "tokenIn") setSwapErrors(prev => ({ ...prev, tokenOut: "" }));
       }
     } else if (key === "amountIn" || key === "amountOutMin") {
-      if (value && Number(value) <= 0) msg = "Debe ser mayor a 0";
-      if (key === "amountOutMin" && f.amountIn) {
-        const suggested = Number(f.amountIn) * 0.95;
+      if (value && Number(value) <= 0) msg = "Must be greater than 0";
+      if (key === "amountOutMin" && form.amountIn) {
+        const suggested = Number(form.amountIn) * 0.95;
         if (Number(value) < suggested) {
-          msg = `Rango válido: mínimo ${suggested}`;
+          msg = `Valid range: minimum ${suggested}`;
         }
       }
     }
@@ -525,18 +519,18 @@ const SwapSwap = () => {
   };
 
   const swap = async () => {
-    if (!ethers.utils.isAddress(f.tokenIn) || !ethers.utils.isAddress(f.tokenOut)) {
+    if (!isAddress(form.tokenIn) || !isAddress(form.tokenOut)) {
       txToast("error", "Invalid token address");
       return;
     }
 
-    const tokenInAddress = getAddress(f.tokenIn);
-    const tokenOutAddress = getAddress(f.tokenOut);
+    const tokenInAddress = getAddress(form.tokenIn);
+    const tokenOutAddress = getAddress(form.tokenOut);
 
     await approveTokens({
       tokenAContract: tokenInAddress,
       tokenBContract: tokenOutAddress,
-      amountA: f.amountIn,
+      amountA: form.amountIn,
       amountB: "0",
     });
 
@@ -544,11 +538,11 @@ const SwapSwap = () => {
       {
         functionName: "swapExactTokensForTokens",
         args: [
-          parseUnits(f.amountIn, 18),
-          parseUnits(f.amountOutMin, 18),
+          parseUnits(form.amountIn, 18),
+          parseUnits(form.amountOutMin, 18),
           [tokenInAddress, tokenOutAddress],
           address as Address,
-          BigInt(f.deadline),
+          BigInt(form.deadline),
         ],
       },
       {
@@ -571,7 +565,7 @@ const SwapSwap = () => {
               tokenOut: "token out address",
               deadline: "deadline (unix)",
             }[k]}
-            value={(f as any)[k]}
+            value={(form as any)[k]}
             onChange={e => handleSwapChange(k, e.target.value)}
           />
           {swapErrors[k] && <small className="text-red-500">{swapErrors[k]}</small>}
