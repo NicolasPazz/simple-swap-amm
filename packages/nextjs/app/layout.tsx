@@ -4,7 +4,12 @@ import { ThemeProvider } from "~~/components/ThemeProvider";
 import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
-export const metadata = getMetadata({ title: "Simple Swap", description: "Token swap interface" });
+export const metadata = getMetadata({
+  title: "Simple Swap",
+  description:
+    "SimpleSwap is a decentralized exchange interface for instant ERC-20 token swaps.",
+  imageRelativePath: "/logo.svg",
+});
 
 const SimpleSwapApp = ({ children }: { children: React.ReactNode }) => {
   return (
